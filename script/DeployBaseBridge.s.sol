@@ -16,7 +16,7 @@ contract DeployBaseBridge is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        BaseBridgeOApp baseBridge = new BaseBridgeOApp(endpoint, token, deployer, dstEid);
+        BaseBridgeOApp baseBridge = new BaseBridgeOApp(endpoint, token, deployer, deployer, dstEid);
 
         vm.stopBroadcast();
 

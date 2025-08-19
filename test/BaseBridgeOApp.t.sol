@@ -76,6 +76,7 @@ contract BaseBridgeOAppTest is Test {
             address(endpoint), // mock endpoint
             address(INTMAX),
             owner,
+            owner,
             DST_EID
         );
         // Set peer so OAppCore._getPeerOrRevert won't revert during tests
