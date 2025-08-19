@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.27;
+pragma solidity 0.8.30;
 
 import {Test, console} from "forge-std/Test.sol";
 import {MainnetBridgeOApp} from "../src/MainnetBridgeOApp.sol";
@@ -39,11 +39,7 @@ contract MockEndpoint {
     ) external {
         // Call the OApp's lzReceive function
         MainnetBridgeOApp(_oapp).lzReceive(
-            Origin({srcEid: _srcEid, sender: _sender, nonce: _nonce}),
-            _guid,
-            _message,
-            address(this),
-            _extraData
+            Origin({srcEid: _srcEid, sender: _sender, nonce: _nonce}), _guid, _message, address(this), _extraData
         );
     }
 }
@@ -103,16 +99,22 @@ contract MainnetBridgeOAppTest is Test {
         srcSender = bytes32(uint256(uint160(address(0x4)))); // Mock Base OApp address
         mockEndpoint = new MockEndpoint();
 
-        mainnetBridge = new MainnetBridgeOApp(address(mockEndpoint), address(INTMAX), owner, SRC_EID, srcSender);
+        mainnetBridge = new MainnetBridgeOApp(
+            address(mockEndpoint), // endpoint
+            owner, // delegate
+            owner, // owner
+            address(INTMAX), // token
+            SRC_EID,
+            srcSender
+        );
 
         // Set peer so OAppCore._getPeerOrRevert won't revert during tests
         vm.prank(owner);
         mainnetBridge.setPeer(SRC_EID, srcSender);
-        
+
         // Set peer for test error EID 999 to allow our custom error testing
         vm.prank(owner);
         mainnetBridge.setPeer(999, srcSender);
-        
 
         // Set balance for mainnet bridge for distribution
         INTMAX.setBalance(address(mainnetBridge), 10000 * 1e18);

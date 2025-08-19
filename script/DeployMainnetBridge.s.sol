@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.27;
+pragma solidity 0.8.30;
 
 import {Script, console} from "forge-std/Script.sol";
 import {MainnetBridgeOApp} from "../src/MainnetBridgeOApp.sol";
@@ -20,7 +20,14 @@ contract DeployMainnetBridge is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        MainnetBridgeOApp mainnetBridge = new MainnetBridgeOApp(endpoint, token, deployer, srcEid, srcSender);
+        MainnetBridgeOApp mainnetBridge = new MainnetBridgeOApp(
+            endpoint, // endpoint
+            deployer, // delegate
+            deployer, // owner
+            token, // token
+            srcEid,
+            srcSender
+        );
 
         vm.stopBroadcast();
 

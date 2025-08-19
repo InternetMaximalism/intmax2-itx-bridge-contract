@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.27;
+pragma solidity 0.8.30;
 
 import {Script, console} from "forge-std/Script.sol";
 import {BaseBridgeOApp} from "../src/BaseBridgeOApp.sol";
@@ -16,7 +16,13 @@ contract DeployBaseBridge is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        BaseBridgeOApp baseBridge = new BaseBridgeOApp(endpoint, token, deployer, deployer, dstEid);
+        BaseBridgeOApp baseBridge = new BaseBridgeOApp(
+            endpoint, // endpoint
+            deployer, // delegate
+            deployer, // owner
+            token, // token
+            dstEid
+        );
 
         vm.stopBroadcast();
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.27;
+pragma solidity 0.8.30;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -7,6 +7,7 @@ import {OAppReceiver, OAppCore, Origin} from "@layerzerolabs/oapp/contracts/oapp
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IMainnetBridgeOApp} from "./interfaces/IMainnetBridgeOApp.sol";
 
+// upgradable
 contract MainnetBridgeOApp is OAppReceiver, IMainnetBridgeOApp {
     using SafeERC20 for IERC20;
 
@@ -14,10 +15,14 @@ contract MainnetBridgeOApp is OAppReceiver, IMainnetBridgeOApp {
     uint32 private immutable _SRC_EID;
     bytes32 private immutable _SRC_SENDER;
 
-    constructor(address _endpoint, address _token, address _delegate, uint32 _srcEid, bytes32 _srcSender)
-        OAppCore(_endpoint, _delegate)
-        Ownable(_delegate)
-    {
+    constructor(
+        address _endpoint,
+        address _delegate,
+        address _owner,
+        address _token,
+        uint32 _srcEid,
+        bytes32 _srcSender
+    ) OAppCore(_endpoint, _delegate) Ownable(_owner) {
         _TOKEN = IERC20(_token);
         _SRC_EID = _srcEid;
         _SRC_SENDER = _srcSender;

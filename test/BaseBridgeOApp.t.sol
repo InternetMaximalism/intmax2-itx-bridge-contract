@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.27;
+pragma solidity 0.8.30;
 
 import {Test, console} from "forge-std/Test.sol";
 import {BaseBridgeOApp} from "../src/BaseBridgeOApp.sol";
@@ -74,9 +74,9 @@ contract BaseBridgeOAppTest is Test {
 
         baseBridge = new BaseBridgeOApp(
             address(endpoint), // mock endpoint
-            address(INTMAX),
-            owner,
-            owner,
+            owner, // delegate
+            owner, // owner
+            address(INTMAX), // token
             DST_EID
         );
         // Set peer so OAppCore._getPeerOrRevert won't revert during tests

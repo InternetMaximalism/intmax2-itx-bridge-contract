@@ -8,6 +8,6 @@ remappings = [
     "@layerzerolabs/oapp/=lib/LayerZero-v2/packages/layerzero-v2/evm/oapp/",
     "forge-std/=lib/forge-std/src/"
 ]
-solc = "0.8.27"
+solc = "0.8.30"
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
