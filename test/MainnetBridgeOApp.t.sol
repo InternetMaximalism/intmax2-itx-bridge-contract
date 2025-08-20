@@ -13,6 +13,9 @@ import {
 } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
 
 contract MockEndpoint {
+    mapping(address => mapping(uint32 => mapping(bytes32 => mapping(uint64 => bytes32)))) public inboundPayloadHash;
+    mapping(address => bool) public cleared;
+
     function setDelegate(address) external {}
 
     function quote(MessagingParams calldata, address) external pure returns (MessagingFee memory) {
@@ -29,6 +32,17 @@ contract MockEndpoint {
     }
 
     function lzReceive(
+        Origin calldata _origin,
+        address _receiver,
+        bytes32 _guid,
+        bytes calldata _message,
+        bytes calldata _extraData
+    ) external {
+        // Call the OApp's lzReceive function
+        MainnetBridgeOApp(_receiver).lzReceive(_origin, _guid, _message, address(this), _extraData);
+    }
+
+    function lzReceive(
         address payable _oapp,
         uint32 _srcEid,
         bytes32 _sender,
@@ -41,6 +55,14 @@ contract MockEndpoint {
         MainnetBridgeOApp(_oapp).lzReceive(
             Origin({srcEid: _srcEid, sender: _sender, nonce: _nonce}), _guid, _message, address(this), _extraData
         );
+    }
+
+    function clear(address _oapp, Origin calldata _origin, bytes32 _guid, bytes calldata _message) external {
+        cleared[_oapp] = true;
+    }
+
+    function setInboundPayloadHash(address _receiver, uint32 _srcEid, bytes32 _sender, uint64 _nonce, bytes32 _hash) external {
+        inboundPayloadHash[_receiver][_srcEid][_sender][_nonce] = _hash;
     }
 }
 
@@ -156,5 +178,90 @@ contract MainnetBridgeOAppTest is Test {
 
         vm.expectRevert(IMainnetBridgeOApp.RecipientZero.selector);
         mockEndpoint.lzReceive(payable(address(mainnetBridge)), SRC_EID, srcSender, 1, bytes32(0), payload, bytes(""));
+    }
+
+    function test_ManualRetry() public {
+        uint256 amount = 100 * 1e18;
+        bytes memory message = abi.encode(recipient, amount, srcUser);
+        Origin memory origin = Origin({srcEid: SRC_EID, sender: srcSender, nonce: 1});
+        bytes32 guid = bytes32(uint256(1));
+        bytes memory extraData = bytes("");
+
+        uint256 recipientBalanceBefore = INTMAX.balanceOf(recipient);
+
+        mainnetBridge.manualRetry(origin, guid, message, extraData);
+
+        uint256 recipientBalanceAfter = INTMAX.balanceOf(recipient);
+        assertEq(recipientBalanceAfter - recipientBalanceBefore, amount);
+    }
+
+    function test_ClearMessage() public {
+        Origin memory origin = Origin({srcEid: SRC_EID, sender: srcSender, nonce: 1});
+        bytes32 guid = bytes32(uint256(1));
+        bytes memory message = abi.encode(recipient, 100 * 1e18, srcUser);
+
+        vm.prank(owner);
+        mainnetBridge.clearMessage(origin, guid, message);
+
+        assertTrue(mockEndpoint.cleared(address(mainnetBridge)));
+    }
+
+    function test_HasStoredPayload() public {
+        uint256 amount = 100 * 1e18;
+        bytes memory message = abi.encode(recipient, amount, srcUser);
+        bytes32 guid = bytes32(uint256(1));
+        
+        bytes memory payload = abi.encodePacked(guid, message);
+        bytes32 payloadHash = keccak256(payload);
+        
+        // Set the stored payload hash in mock endpoint
+        mockEndpoint.setInboundPayloadHash(address(mainnetBridge), SRC_EID, srcSender, 1, payloadHash);
+
+        bool hasPayload = mainnetBridge.hasStoredPayload(SRC_EID, srcSender, 1, guid, message);
+        assertTrue(hasPayload);
+    }
+
+    function test_HasStoredPayloadFalse() public {
+        uint256 amount = 100 * 1e18;
+        bytes memory message = abi.encode(recipient, amount, srcUser);
+        bytes32 guid = bytes32(uint256(1));
+
+        bool hasPayload = mainnetBridge.hasStoredPayload(SRC_EID, srcSender, 1, guid, message);
+        assertFalse(hasPayload);
+    }
+
+    function test_WithdrawTokensSuccess() public {
+        uint256 amount = 1000 * 1e18;
+        address to = address(0x5);
+
+        uint256 toBalanceBefore = INTMAX.balanceOf(to);
+        uint256 contractBalanceBefore = INTMAX.balanceOf(address(mainnetBridge));
+
+        vm.prank(owner);
+        vm.expectEmit(true, false, false, true);
+        emit IMainnetBridgeOApp.TokensWithdrawn(to, amount);
+        mainnetBridge.withdrawTokens(to, amount);
+
+        uint256 toBalanceAfter = INTMAX.balanceOf(to);
+        uint256 contractBalanceAfter = INTMAX.balanceOf(address(mainnetBridge));
+
+        assertEq(toBalanceAfter - toBalanceBefore, amount);
+        assertEq(contractBalanceBefore - contractBalanceAfter, amount);
+    }
+
+    function test_WithdrawTokensRevertInvalidAddress() public {
+        uint256 amount = 1000 * 1e18;
+
+        vm.prank(owner);
+        vm.expectRevert(IMainnetBridgeOApp.InvalidAddress.selector);
+        mainnetBridge.withdrawTokens(address(0), amount);
+    }
+
+    function test_WithdrawTokensRevertInvalidAmount() public {
+        address to = address(0x5);
+
+        vm.prank(owner);
+        vm.expectRevert(IMainnetBridgeOApp.InvalidAmount.selector);
+        mainnetBridge.withdrawTokens(to, 0);
     }
 }

@@ -48,7 +48,40 @@ contract MainnetBridgeOApp is OAppReceiver, IMainnetBridgeOApp {
         emit BridgeFulfilled(srcUser, recipient, amount);
     }
 
+    // Not payable because the _lzReceive function does not handle eth
+    function manualRetry(
+        Origin calldata _origin,
+        bytes32 _guid,
+        bytes calldata _message,
+        bytes calldata _extraData
+    ) external {
+        endpoint.lzReceive(_origin,  address(this), _guid, _message, _extraData);
+    }
+
+    function clearMessage(
+        Origin calldata _origin,
+        bytes32 _guid,
+        bytes calldata _message
+    ) external onlyOwner {
+        endpoint.clear(address(this), _origin, _guid, _message);
+    }
+
     function withdrawTokens(address to, uint256 amount) external onlyOwner {
+        require(to != address(0), InvalidAddress());
+        require(amount > 0, InvalidAmount());
         _TOKEN.safeTransfer(to, amount);
+        emit TokensWithdrawn(to, amount);
+    }
+
+    function hasStoredPayload(
+        uint32 srcEid,
+        bytes32 sender,
+        uint64 nonce,
+        bytes32 guid,
+        bytes calldata message
+    ) external view returns (bool) {
+        bytes memory payload = abi.encodePacked(guid, message);
+        bytes32 payloadHash = keccak256(payload);
+        return endpoint.inboundPayloadHash(address(this), srcEid, sender, nonce) == payloadHash;
     }
 }

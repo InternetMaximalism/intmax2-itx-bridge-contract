@@ -93,7 +93,7 @@ contract BaseBridgeOAppTest is Test {
         
         // Expect BridgeRequested event with new structure
         vm.expectEmit(true, true, false, true);
-        emit IBaseBridgeOApp.BridgeRequested(user, recipient, 1000 * 1e18, MessagingReceipt({
+        emit IBaseBridgeOApp.BridgeRequested(recipient, 1000 * 1e18, user, MessagingReceipt({
             guid: bytes32(0),
             nonce: 1,
             fee: MessagingFee({nativeFee: 0.01 ether, lzTokenFee: 0})
@@ -140,7 +140,7 @@ contract BaseBridgeOAppTest is Test {
         
         // Expect BridgeRequested event for partial amount (500 * 1e18)
         vm.expectEmit(true, true, false, true);
-        emit IBaseBridgeOApp.BridgeRequested(user, recipient, 500 * 1e18, MessagingReceipt({
+        emit IBaseBridgeOApp.BridgeRequested(recipient, 500 * 1e18, user, MessagingReceipt({
             guid: bytes32(0),
             nonce: 1,
             fee: MessagingFee({nativeFee: 0.01 ether, lzTokenFee: 0})

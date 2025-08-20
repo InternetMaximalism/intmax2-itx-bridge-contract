@@ -85,8 +85,7 @@ BASE_BRIDGE_ADDRESS=<deployed_base_bridge_address> forge script script/DeployMai
 ## ステータス監視
 BaseBridgeOAppのBridgeRequestedというイベントにguidが含まれているため、これを監視することでリトライやスタックの状態を確認できます。guidは送信ごとに一意であり、イベントが発火した際に確認できます。
 正常終了のものはDELIVERED。
-例えば24時間経ってもVERIFIEDだったり、FAILEDだったりする場合は、何らかの問題が発生している可能性があるので、
-手動での確認や再試行が必要です。
+例えば24時間経ってもVERIFIEDだったり、いきなりFAILEDになったりする場合は、何らかの問題が発生している可能性があるので、対応を行います。
 nonceの順番が重要になってくるので、フロントを一旦止めてメンテナンスに入る、などの対応が必要かも。。。
 
 ```
@@ -96,22 +95,42 @@ GET https://scan-testnet.layerzero-api.com/v1/messages/${guid}
 # GUIDでメッセージを取得
 # 以下の文字列のいずれかが入る：
 # 'INFLIGHT'　送信中...
+# 'CONFIRMING'　確認中...
 # 'DELIVERED' メッセージ配信完了
 # 'VERIFIED'　検証済み（実行待ち）
 # 'FAILED'　送信失敗
 # 'PAYLOAD_STORED'　実行失敗 - 再試行が必要
 # 'BLOCKED'　ブロック中 - 前のメッセージの問題を解決する必要
-# 'CONFIRMING'　確認中...
 ```
 
+正常な流れは
+INFLIGHT→CONFIRMING→VERIFIED→DELIVERED
+
 ## 緊急対応
-FAILED->リトライ不可、skip()して直接トークンを送るなど手動対応。
-24時間経ってもVERIFIED->Executorの問題。手動リトライ。
-PAYLOAD_STORED-> DVNによる検証は完了したが、_lzReceive()の実行でrevert
-BLOCKED->前のnonceのメッセージが処理されていないため配信ブロック、前のメッセージをskipするなり、endpoint.lzReceive()したりする
+FAILED->リトライ不可、クリアして直接トークンを送るなど手動対応。
+24時間(時間は運用相談)経ってもINFLIGHT、CONFIRMING：ほぼないが、もし発生したらLayerZero運営に連絡
+24時間(時間は運用相談)経ってもVERIFIED->Executorの問題。手動リトライ。
+PAYLOAD_STORED-> DVNによる検証は完了したが、_lzReceive()の実行でrevert、hasStoredPayloadを実行し、trueならばmanualRetry、そうでなければパラメータが間違っている可能性大きい
+BLOCKED->前のnonceのメッセージが処理されていないため配信ブロック、前のメッセージをクリアするなり、manualRetryしたりする
 
+manualRetry->MainnetBridgeOAppのmanualRetry関数
+    // messageはbaseで使用したもの
+    // extra dataはapiで取得
 
+クリア->MainnetBridgeOAppのclear関数
+hasStoredPayloa->MainnetBridgeOAppのhasStoredPayload関数
 
+        // receipt
+// struct MessagingReceipt {
+//     bytes32 guid;
+//     uint64 nonce;
+//     MessagingFee fee;
+// }
+// struct Origin {
+//     uint32 srcEid; // baseのeid
+//     bytes32 sender; // baseのoappのアドレス
+//     uint64 nonce; // nonce
+// }
 
 ## Foundry Usage
 

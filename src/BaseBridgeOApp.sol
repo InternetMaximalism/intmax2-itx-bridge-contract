@@ -9,7 +9,6 @@ import {OAppSender, OAppCore} from "@layerzerolabs/oapp/contracts/oapp/OAppSende
 import {IBaseBridgeOApp} from "./interfaces/IBaseBridgeOApp.sol";
 
 // TODO upgradable reentrancy　、ethが戻ってくるという裏をとる、
-// リトライ/スタック時の運用方法について記載していただけますと幸いです。
 contract BaseBridgeOApp is OAppSender, IBaseBridgeOApp {
     using SafeERC20 for IERC20;
 
@@ -65,13 +64,7 @@ contract BaseBridgeOApp is OAppSender, IBaseBridgeOApp {
             fee,
             payable(_msgSender()) /* If the fee is overcharged, the fee reverts back to the user */
         );
-        // receipt
-// struct MessagingReceipt {
-//     bytes32 guid;
-//     uint64 nonce;
-//     MessagingFee fee;
-// }
-        emit BridgeRequested(_msgSender(), recipient, delta, receipt);
+        emit BridgeRequested(recipient, delta, _msgSender(), receipt);
     }
 
     function _getCurrentAndDelta() private view returns (uint256 current, uint256 delta) {

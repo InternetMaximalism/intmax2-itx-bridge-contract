@@ -9,7 +9,7 @@ interface IBaseBridgeOApp {
     error BalanceLessThanBridged();
     error InsufficientNativeFee();
 
-    event BridgeRequested(address indexed user, address indexed recipient, uint256 amount, MessagingReceipt receipt);
+    event BridgeRequested(address indexed recipient, uint256 amount, address indexed user, MessagingReceipt receipt);
 
     function quoteBridge(address recipient) external view returns (MessagingFee memory fee);
 
