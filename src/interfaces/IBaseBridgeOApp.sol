@@ -16,6 +16,8 @@ interface IBaseBridgeOApp {
     /// @dev Thrown when insufficient native fee is provided for bridging
     error InsufficientNativeFee();
 
+    error InvalidBridgeStorage();
+
     /**
      * @dev Emitted when a bridge request is initiated
      * @param recipient The recipient address on destination chain

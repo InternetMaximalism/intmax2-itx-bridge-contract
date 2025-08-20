@@ -3,6 +3,7 @@ pragma solidity 0.8.30;
 
 import {Test} from "forge-std/Test.sol";
 import {BaseBridgeOApp} from "../src/BaseBridgeOApp.sol";
+import {BridgeStorage} from "../src/BridgeStorage.sol";
 import {IBaseBridgeOApp} from "../src/interfaces/IBaseBridgeOApp.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {MessagingFee} from "@layerzerolabs/oapp/contracts/oapp/OApp.sol";
@@ -62,6 +63,7 @@ contract MockINTMAXToken is IERC20 {
 
 contract BaseBridgeOAppTest is Test {
     BaseBridgeOApp public baseBridge;
+    BridgeStorage public bridgeStorage;
     MockINTMAXToken public INTMAX;
     MockEndpoint public endpoint;
     address public owner = address(0x1);
@@ -73,6 +75,10 @@ contract BaseBridgeOAppTest is Test {
         INTMAX = new MockINTMAXToken();
         endpoint = new MockEndpoint();
 
+        // Deploy BridgeStorage
+        bridgeStorage = new BridgeStorage(owner);
+
+        // Deploy BaseBridgeOApp
         baseBridge = new BaseBridgeOApp(
             address(endpoint), // mock endpoint
             owner, // delegate
@@ -80,6 +86,14 @@ contract BaseBridgeOAppTest is Test {
             address(INTMAX), // token
             DST_EID
         );
+
+        // Set bridge storage
+        vm.prank(owner);
+        baseBridge.setBridgeStorage(address(bridgeStorage));
+
+        // Transfer ownership of BridgeStorage to BaseBridgeOApp
+        vm.prank(owner);
+        bridgeStorage.transferOwnership(address(baseBridge));
 
         // Set peer so OAppCore._getPeerOrRevert won't revert during tests
         bytes32 peer = bytes32(uint256(uint160(owner)));
