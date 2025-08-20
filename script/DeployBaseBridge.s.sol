@@ -23,13 +23,12 @@ contract DeployBaseBridge is Script {
             token, // token
             dstEid
         );
-
-        vm.stopBroadcast();
-
         console.log("Base Bridge deployed to:", address(baseBridge));
         console.log("Endpoint:", endpoint);
         console.log("Token:", token);
         console.log("Destination EID:", dstEid);
         console.log("Owner:", deployer);
+
+        vm.stopBroadcast();
     }
 }

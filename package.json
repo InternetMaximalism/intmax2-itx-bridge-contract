@@ -1,0 +1,21 @@
+{
+  "name": "intmax2-itx-bridge-contract",
+  "version": "1.0.0",
+  "description": "LayerZeroを使用したBase↔Mainnet ITXトークンブリッジの実装。",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "forge test",
+    "lint": "solhint 'src/**/*.sol' 'script/**/*.sol' 'test/**/*.sol'",
+    "lint:fix": "solhint 'src/**/*.sol' 'script/**/*.sol' 'test/**/*.sol' --fix"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "solhint": "^6.0.0"
+  }
+}

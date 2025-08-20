@@ -6,13 +6,13 @@ import {MessagingFee, MessagingReceipt} from "@layerzerolabs/oapp/contracts/oapp
 interface IBaseBridgeOApp {
     /// @dev Thrown when recipient address is zero
     error RecipientZero();
-    
+
     /// @dev Thrown when there's no delta between current and previous balance
     error NoDelta();
-    
+
     /// @dev Thrown when current balance is less than previously bridged amount
     error BalanceLessThanBridged();
-    
+
     /// @dev Thrown when insufficient native fee is provided for bridging
     error InsufficientNativeFee();
 
@@ -39,7 +39,7 @@ interface IBaseBridgeOApp {
      * @dev Only bridges the delta between current balance and previously bridged amount
      */
     function bridgeTo(address recipient) external payable;
-    
+
     /**
      * @notice Get the total amount of tokens bridged by a user
      * @param user The user address to query

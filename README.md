@@ -148,3 +148,9 @@ $ forge test
 ```shell
 $ forge fmt
 ```
+
+### lint
+```shell
+$ npm install
+npm run lint:fix
+```

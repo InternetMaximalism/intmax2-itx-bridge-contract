@@ -28,14 +28,13 @@ contract DeployMainnetBridge is Script {
             srcEid,
             srcSender
         );
-
-        vm.stopBroadcast();
-
         console.log("Mainnet Bridge deployed to:", address(mainnetBridge));
         console.log("Endpoint:", endpoint);
         console.log("Token:", token);
         console.log("Source EID:", srcEid);
         console.log("Source Sender:", baseBridgeAddress);
         console.log("Owner:", deployer);
+
+        vm.stopBroadcast();
     }
 }
