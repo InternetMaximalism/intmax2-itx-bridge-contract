@@ -7,7 +7,8 @@ import {OAppReceiver, OAppCore, Origin} from "@layerzerolabs/oapp/contracts/oapp
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IMainnetBridgeOApp} from "./interfaces/IMainnetBridgeOApp.sol";
 
-// upgradable
+// Not to be UPGRADABLE because there are no internal variables 
+// and there is a token rescue function in case something goes wrong.
 contract MainnetBridgeOApp is OAppReceiver, IMainnetBridgeOApp {
     using SafeERC20 for IERC20;
 
@@ -45,5 +46,9 @@ contract MainnetBridgeOApp is OAppReceiver, IMainnetBridgeOApp {
 
         _TOKEN.safeTransfer(recipient, amount);
         emit BridgeFulfilled(srcUser, recipient, amount);
+    }
+
+    function withdrawTokens(address to, uint256 amount) external onlyOwner {
+        _TOKEN.safeTransfer(to, amount);
     }
 }

@@ -4,14 +4,12 @@ pragma solidity 0.8.30;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {MessagingFee} from "@layerzerolabs/oapp/contracts/oapp/OApp.sol";
+import {MessagingFee, MessagingReceipt} from "@layerzerolabs/oapp/contracts/oapp/OApp.sol";
 import {OAppSender, OAppCore} from "@layerzerolabs/oapp/contracts/oapp/OAppSender.sol";
 import {IBaseBridgeOApp} from "./interfaces/IBaseBridgeOApp.sol";
 
 // TODO upgradable reentrancy　、ethが戻ってくるという裏をとる、
-// 受信側で必要なガスの量を指定した方が良いでしょうか?
 // リトライ/スタック時の運用方法について記載していただけますと幸いです。
-// ethはユーザに戻るらしい。receiveイランのちゃうか。
 contract BaseBridgeOApp is OAppSender, IBaseBridgeOApp {
     using SafeERC20 for IERC20;
 
@@ -33,30 +31,54 @@ contract BaseBridgeOApp is OAppSender, IBaseBridgeOApp {
         return _bridgedAmount[user];
     }
 
+    /**
+     * @notice Get the estimated fee for bridging to recipient
+     * @param recipient The recipient address on destination chain
+     * @return fee The estimated messaging fee
+     */
+    function quoteBridge(address recipient) external view returns (MessagingFee memory fee) {
+        require(recipient != address(0), RecipientZero());
+
+        (, uint256 delta) = _getCurrentAndDelta();
+
+        bytes memory payload = abi.encode(recipient, delta, _msgSender());
+        bytes memory options = bytes("");
+
+        return _quote(_DST_EID, payload, options, false);
+    }
+
     function bridgeTo(address recipient) external payable {
         require(recipient != address(0), RecipientZero());
 
-        uint256 current = _TOKEN.balanceOf(_msgSender());
-        uint256 prev = _bridgedAmount[_msgSender()];
-        require(current > prev, BalanceLessThanBridged());
-        uint256 delta = current - prev;
-        require(delta > 0, NoDelta());
+        (uint256 current, uint256 delta) = _getCurrentAndDelta();
         _bridgedAmount[_msgSender()] = current;
 
         bytes memory payload = abi.encode(recipient, delta, _msgSender());
         // see https://docs.layerzero.network/v2/tools/sdks/options#evm-solidity
         bytes memory options = bytes("");
         MessagingFee memory fee = _quote(_DST_EID, payload, options, false /* only Ethereum */ );
-        // TODO きっちりにしたほうがいいのでは。
         require(msg.value >= fee.nativeFee, InsufficientNativeFee());
-        _lzSend(
+        MessagingReceipt memory receipt = _lzSend(
             _DST_EID,
             payload,
             options,
             fee,
             payable(_msgSender()) /* If the fee is overcharged, the fee reverts back to the user */
         );
+        // receipt
+// struct MessagingReceipt {
+//     bytes32 guid;
+//     uint64 nonce;
+//     MessagingFee fee;
+// }
+        emit BridgeRequested(_msgSender(), recipient, delta, receipt);
+    }
 
-        emit BridgeRequested(_msgSender(), recipient, delta, fee.nativeFee);
+    function _getCurrentAndDelta() private view returns (uint256 current, uint256 delta) {
+        current = _TOKEN.balanceOf(_msgSender());
+        uint256 prev = _bridgedAmount[_msgSender()];
+        require(current > prev, BalanceLessThanBridged());
+        delta = current - prev;
+        require(delta > 0, NoDelta());
     }
 }

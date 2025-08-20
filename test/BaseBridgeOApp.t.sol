@@ -5,9 +5,9 @@ import {Test, console} from "forge-std/Test.sol";
 import {BaseBridgeOApp} from "../src/BaseBridgeOApp.sol";
 import {IBaseBridgeOApp} from "../src/interfaces/IBaseBridgeOApp.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {MessagingFee} from "@layerzerolabs/oapp/contracts/oapp/OApp.sol";
 import {
     MessagingParams,
-    MessagingFee,
     MessagingReceipt
 } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
 
@@ -90,6 +90,15 @@ contract BaseBridgeOAppTest is Test {
 
     function test_BridgeToSuccess() public {
         vm.prank(user);
+        
+        // Expect BridgeRequested event with new structure
+        vm.expectEmit(true, true, false, true);
+        emit IBaseBridgeOApp.BridgeRequested(user, recipient, 1000 * 1e18, MessagingReceipt({
+            guid: bytes32(0),
+            nonce: 1,
+            fee: MessagingFee({nativeFee: 0.01 ether, lzTokenFee: 0})
+        }));
+        
         baseBridge.bridgeTo{value: 0.01 ether}(recipient);
 
         assertEq(baseBridge.bridgedAmount(user), 1000 * 1e18);
@@ -106,7 +115,7 @@ contract BaseBridgeOAppTest is Test {
         baseBridge.bridgeTo{value: 0.01 ether}(recipient);
 
         vm.prank(user);
-        vm.expectRevert(IBaseBridgeOApp.NoDelta.selector);
+        vm.expectRevert(IBaseBridgeOApp.BalanceLessThanBridged.selector); // current == prev fails current > prev check
         baseBridge.bridgeTo{value: 0.01 ether}(recipient);
     }
 
@@ -128,8 +137,67 @@ contract BaseBridgeOAppTest is Test {
         INTMAX.setBalance(user, 1500 * 1e18);
 
         vm.prank(user);
+        
+        // Expect BridgeRequested event for partial amount (500 * 1e18)
+        vm.expectEmit(true, true, false, true);
+        emit IBaseBridgeOApp.BridgeRequested(user, recipient, 500 * 1e18, MessagingReceipt({
+            guid: bytes32(0),
+            nonce: 1,
+            fee: MessagingFee({nativeFee: 0.01 ether, lzTokenFee: 0})
+        }));
+        
         baseBridge.bridgeTo{value: 0.01 ether}(recipient);
 
         assertEq(baseBridge.bridgedAmount(user), 1500 * 1e18);
+    }
+
+    function test_QuoteBridge() public {
+        vm.prank(user);
+        MessagingFee memory fee = baseBridge.quoteBridge(recipient);
+
+        // Fee should be greater than 0
+        assertGt(fee.nativeFee, 0);
+        // LZ token fee should be 0 for this setup
+        assertEq(fee.lzTokenFee, 0);
+
+        // Fee should be 0.01 ether as per mock setup
+        assertEq(fee.nativeFee, 0.01 ether);
+    }
+
+    function test_QuoteBridgeRevertRecipientZero() public {
+        vm.prank(user);
+        vm.expectRevert(IBaseBridgeOApp.RecipientZero.selector);
+        baseBridge.quoteBridge(address(0));
+    }
+
+    function test_QuoteBridgeRevertNoDelta() public {
+        INTMAX.setBalance(user, 0); // No tokens
+        vm.prank(user);
+        vm.expectRevert(IBaseBridgeOApp.BalanceLessThanBridged.selector); // 0 <= 0 fails current > prev check
+        baseBridge.quoteBridge(recipient);
+    }
+
+    function test_QuoteBridgeRevertActualNoDelta() public {
+        // First bridge some tokens to set prev balance
+        vm.prank(user);
+        baseBridge.bridgeTo{value: 0.01 ether}(recipient);
+
+        // Now current == prev, so current > prev fails first
+        vm.prank(user);
+        vm.expectRevert(IBaseBridgeOApp.BalanceLessThanBridged.selector);
+        baseBridge.quoteBridge(recipient);
+    }
+
+    function test_QuoteBridgeRevertBalanceLessThanBridged() public {
+        // First bridge some tokens
+        vm.prank(user);
+        baseBridge.bridgeTo{value: 0.01 ether}(recipient);
+
+        // Then reduce balance below bridged amount
+        INTMAX.setBalance(user, 500 * 1e18);
+
+        vm.prank(user);
+        vm.expectRevert(IBaseBridgeOApp.BalanceLessThanBridged.selector);
+        baseBridge.quoteBridge(recipient);
     }
 }
