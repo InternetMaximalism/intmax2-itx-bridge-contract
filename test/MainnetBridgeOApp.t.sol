@@ -57,11 +57,15 @@ contract MockEndpoint {
         );
     }
 
-    function clear(address _oapp, Origin calldata _origin, bytes32 _guid, bytes calldata _message) external {
+    function clear(address _oapp, Origin calldata, /* _origin */ bytes32, /* _guid */ bytes calldata /* _message */ )
+        external
+    {
         cleared[_oapp] = true;
     }
 
-    function setInboundPayloadHash(address _receiver, uint32 _srcEid, bytes32 _sender, uint64 _nonce, bytes32 _hash) external {
+    function setInboundPayloadHash(address _receiver, uint32 _srcEid, bytes32 _sender, uint64 _nonce, bytes32 _hash)
+        external
+    {
         inboundPayloadHash[_receiver][_srcEid][_sender][_nonce] = _hash;
     }
 }
@@ -210,10 +214,10 @@ contract MainnetBridgeOAppTest is Test {
         uint256 amount = 100 * 1e18;
         bytes memory message = abi.encode(recipient, amount, srcUser);
         bytes32 guid = bytes32(uint256(1));
-        
+
         bytes memory payload = abi.encodePacked(guid, message);
         bytes32 payloadHash = keccak256(payload);
-        
+
         // Set the stored payload hash in mock endpoint
         mockEndpoint.setInboundPayloadHash(address(mainnetBridge), SRC_EID, srcSender, 1, payloadHash);
 
@@ -221,7 +225,7 @@ contract MainnetBridgeOAppTest is Test {
         assertTrue(hasPayload);
     }
 
-    function test_HasStoredPayloadFalse() public {
+    function test_HasStoredPayloadFalse() public view {
         uint256 amount = 100 * 1e18;
         bytes memory message = abi.encode(recipient, amount, srcUser);
         bytes32 guid = bytes32(uint256(1));

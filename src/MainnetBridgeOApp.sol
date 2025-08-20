@@ -7,7 +7,7 @@ import {OAppReceiver, OAppCore, Origin} from "@layerzerolabs/oapp/contracts/oapp
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IMainnetBridgeOApp} from "./interfaces/IMainnetBridgeOApp.sol";
 
-// Not to be UPGRADABLE because there are no internal variables 
+// Not to be UPGRADABLE because there are no internal variables
 // and there is a token rescue function in case something goes wrong.
 contract MainnetBridgeOApp is OAppReceiver, IMainnetBridgeOApp {
     using SafeERC20 for IERC20;
@@ -49,20 +49,13 @@ contract MainnetBridgeOApp is OAppReceiver, IMainnetBridgeOApp {
     }
 
     // Not payable because the _lzReceive function does not handle eth
-    function manualRetry(
-        Origin calldata _origin,
-        bytes32 _guid,
-        bytes calldata _message,
-        bytes calldata _extraData
-    ) external {
-        endpoint.lzReceive(_origin,  address(this), _guid, _message, _extraData);
+    function manualRetry(Origin calldata _origin, bytes32 _guid, bytes calldata _message, bytes calldata _extraData)
+        external
+    {
+        endpoint.lzReceive(_origin, address(this), _guid, _message, _extraData);
     }
 
-    function clearMessage(
-        Origin calldata _origin,
-        bytes32 _guid,
-        bytes calldata _message
-    ) external onlyOwner {
+    function clearMessage(Origin calldata _origin, bytes32 _guid, bytes calldata _message) external onlyOwner {
         endpoint.clear(address(this), _origin, _guid, _message);
     }
 
@@ -73,13 +66,11 @@ contract MainnetBridgeOApp is OAppReceiver, IMainnetBridgeOApp {
         emit TokensWithdrawn(to, amount);
     }
 
-    function hasStoredPayload(
-        uint32 srcEid,
-        bytes32 sender,
-        uint64 nonce,
-        bytes32 guid,
-        bytes calldata message
-    ) external view returns (bool) {
+    function hasStoredPayload(uint32 srcEid, bytes32 sender, uint64 nonce, bytes32 guid, bytes calldata message)
+        external
+        view
+        returns (bool)
+    {
         bytes memory payload = abi.encodePacked(guid, message);
         bytes32 payloadHash = keccak256(payload);
         return endpoint.inboundPayloadHash(address(this), srcEid, sender, nonce) == payloadHash;

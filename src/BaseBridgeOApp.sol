@@ -4,12 +4,12 @@ pragma solidity 0.8.30;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {MessagingFee, MessagingReceipt} from "@layerzerolabs/oapp/contracts/oapp/OApp.sol";
 import {OAppSender, OAppCore} from "@layerzerolabs/oapp/contracts/oapp/OAppSender.sol";
 import {IBaseBridgeOApp} from "./interfaces/IBaseBridgeOApp.sol";
 
-// TODO upgradable reentrancy　、ethが戻ってくるという裏をとる、
-contract BaseBridgeOApp is OAppSender, IBaseBridgeOApp {
+contract BaseBridgeOApp is OAppSender, ReentrancyGuard, IBaseBridgeOApp {
     using SafeERC20 for IERC20;
 
     IERC20 private immutable _TOKEN;
@@ -17,9 +17,9 @@ contract BaseBridgeOApp is OAppSender, IBaseBridgeOApp {
 
     mapping(address => uint256) private _bridgedAmount;
 
-    constructor(address _endpoint, address _delegate, address _owner, address _token, uint32 _dstEid)
+    constructor(address _endpoint, address _delegate, address owner, address _token, uint32 _dstEid)
         OAppCore(_endpoint, _delegate)
-        Ownable(_owner)
+        Ownable(owner)
     {
         _TOKEN = IERC20(_token);
         // https://docs.layerzero.network/v2/concepts/glossary#endpoint-id
@@ -46,7 +46,7 @@ contract BaseBridgeOApp is OAppSender, IBaseBridgeOApp {
         return _quote(_DST_EID, payload, options, false);
     }
 
-    function bridgeTo(address recipient) external payable {
+    function bridgeTo(address recipient) external payable nonReentrant {
         require(recipient != address(0), RecipientZero());
 
         (uint256 current, uint256 delta) = _getCurrentAndDelta();
