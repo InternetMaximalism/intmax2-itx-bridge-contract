@@ -28,6 +28,13 @@ interface IBaseBridgeOApp {
     event BridgeRequested(address indexed recipient, uint256 amount, address indexed user, MessagingReceipt receipt);
 
     /**
+     * @dev Emitted when the bridge storage contract is updated
+     * @param oldStorage The previous bridge storage contract address
+     * @param newStorage The new bridge storage contract address
+     */
+    event BridgeStorageUpdated(address indexed oldStorage, address indexed newStorage);
+
+    /**
      * @notice Get the estimated fee for bridging
      * @return fee The estimated messaging fee required for the bridge transaction
      */

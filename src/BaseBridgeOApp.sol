@@ -45,7 +45,9 @@ contract BaseBridgeOApp is OAppSender, ReentrancyGuard, IBaseBridgeOApp {
 
     function setBridgeStorage(address _bridgeStorage) external onlyOwner {
         require(_bridgeStorage != address(0), InvalidBridgeStorage());
+        address oldStorage = address(bridgeStorage);
         bridgeStorage = IBridgeStorage(_bridgeStorage);
+        emit BridgeStorageUpdated(oldStorage, _bridgeStorage);
     }
 
     function transferStorageOwnership(address newOwner) external onlyOwner {

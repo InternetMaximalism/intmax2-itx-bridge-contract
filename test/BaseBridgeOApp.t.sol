@@ -280,6 +280,32 @@ contract BaseBridgeOAppTest is Test {
         vm.expectRevert();
         baseBridge.transferStorageOwnership(newOwner);
     }
+
+    function test_SetBridgeStorageEmitsEvent() public {
+        address newBridgeStorage = address(new BridgeStorage(owner));
+        address oldStorage = address(bridgeStorage);
+        
+        // Expect BridgeStorageUpdated event
+        vm.expectEmit(true, true, false, true);
+        emit IBaseBridgeOApp.BridgeStorageUpdated(oldStorage, newBridgeStorage);
+        
+        vm.prank(owner);
+        baseBridge.setBridgeStorage(newBridgeStorage);
+    }
+
+    function test_SetBridgeStorageRevertNotOwner() public {
+        address newBridgeStorage = address(new BridgeStorage(owner));
+        
+        vm.prank(user);
+        vm.expectRevert();
+        baseBridge.setBridgeStorage(newBridgeStorage);
+    }
+
+    function test_SetBridgeStorageRevertInvalidAddress() public {
+        vm.prank(owner);
+        vm.expectRevert(IBaseBridgeOApp.InvalidBridgeStorage.selector);
+        baseBridge.setBridgeStorage(address(0));
+    }
 }
 
 contract SimpleReentrancyTest {
