@@ -16,8 +16,18 @@ interface IBaseBridgeOApp {
     /// @dev Thrown when insufficient native fee is provided for bridging
     error InsufficientNativeFee();
 
+    /// @dev Thrown when an invalid bridge storage address is provided (e.g., zero address)
     error InvalidBridgeStorage();
 
+    /// @dev Thrown when an invalid gas limit is provided (e.g., zero or negative value)
+    error InvalidGasLimit();
+
+    /**
+     * @dev Emitted when the gas limit for LayerZero execution is updated
+     * @param oldLimit The previous gas limit value
+     * @param newLimit The new gas limit value
+     */
+    event GasLimitUpdated(uint128 oldLimit, uint128 newLimit);
     /**
      * @dev Emitted when a bridge request is initiated
      * @param recipient The recipient address on destination chain
@@ -34,6 +44,13 @@ interface IBaseBridgeOApp {
      */
     event BridgeStorageUpdated(address indexed oldStorage, address indexed newStorage);
 
+    /**
+     * @notice Set the gas limit for LayerZero message execution on the destination chain
+     * @param _gasLimit The new gas limit value (must be greater than 0)
+     * @dev Only callable by contract owner
+     * @dev Emits GasLimitUpdated event
+     */
+    function setGasLimit(uint128 _gasLimit) external;
     /**
      * @notice Get the estimated fee for bridging
      * @return fee The estimated messaging fee required for the bridge transaction

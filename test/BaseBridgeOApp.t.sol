@@ -5,6 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {BaseBridgeOApp} from "../src/BaseBridgeOApp.sol";
 import {BridgeStorage} from "../src/BridgeStorage.sol";
 import {IBaseBridgeOApp} from "../src/interfaces/IBaseBridgeOApp.sol";
+import {IBridgeStorage} from "../src/interfaces/IBridgeStorage.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {MessagingFee, MessagingReceipt} from "@layerzerolabs/oapp/contracts/oapp/OApp.sol";
 import {
@@ -305,6 +306,56 @@ contract BaseBridgeOAppTest is Test {
         vm.prank(owner);
         vm.expectRevert(IBaseBridgeOApp.InvalidBridgeStorage.selector);
         baseBridge.setBridgeStorage(address(0));
+    }
+
+    function test_BridgeStoragePublicGetter() public view {
+        // Verify that bridgeStorage is publicly accessible
+        IBridgeStorage currentStorage = baseBridge.bridgeStorage();
+        assertEq(address(currentStorage), address(bridgeStorage));
+    }
+
+    function test_BridgeStorageUpdatedAfterSet() public {
+        address newBridgeStorage = address(new BridgeStorage(owner));
+
+        // Verify initial storage
+        assertEq(address(baseBridge.bridgeStorage()), address(bridgeStorage));
+
+        // Update storage
+        vm.prank(owner);
+        baseBridge.setBridgeStorage(newBridgeStorage);
+
+        // Verify storage was updated
+        assertEq(address(baseBridge.bridgeStorage()), newBridgeStorage);
+        assertNotEq(address(baseBridge.bridgeStorage()), address(bridgeStorage));
+    }
+
+    function test_SetGasLimitSuccess() public {
+        uint128 newGasLimit = 300000;
+        uint128 oldGasLimit = baseBridge.gasLimit();
+
+        // Expect GasLimitUpdated event
+        vm.expectEmit(true, true, false, true);
+        emit IBaseBridgeOApp.GasLimitUpdated(oldGasLimit, newGasLimit);
+
+        vm.prank(owner);
+        baseBridge.setGasLimit(newGasLimit);
+
+        // Verify gas limit was updated
+        assertEq(baseBridge.gasLimit(), newGasLimit);
+    }
+
+    function test_SetGasLimitRevertNotOwner() public {
+        uint128 newGasLimit = 300000;
+
+        vm.prank(user);
+        vm.expectRevert();
+        baseBridge.setGasLimit(newGasLimit);
+    }
+
+    function test_SetGasLimitRevertZeroValue() public {
+        vm.prank(owner);
+        vm.expectRevert(IBaseBridgeOApp.InvalidGasLimit.selector);
+        baseBridge.setGasLimit(0);
     }
 }
 
