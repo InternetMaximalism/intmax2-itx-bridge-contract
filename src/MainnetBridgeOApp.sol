@@ -31,17 +31,15 @@ contract MainnetBridgeOApp is OAppReceiver, IMainnetBridgeOApp {
 
     // Implement OAppReceiver internal hook and forward to mockLzReceive for testing.
     function _lzReceive(
-        Origin calldata _origin,
+        Origin calldata, /*_origin*/
         bytes32, /*_guid*/
         bytes calldata _message,
         address, /*_executor*/
         bytes calldata /*_extraData*/
     ) internal virtual override {
-        require(_origin.srcEid == _SRC_EID, BadSrcEid());
         // For compatibility, decode the same payload and validate source
         (address recipient, uint256 amount, address srcUser) = abi.decode(_message, (address, uint256, address));
 
-        require(_origin.sender == _SRC_SENDER, BadSender());
         require(recipient != address(0), RecipientZero());
 
         _TOKEN.safeTransfer(recipient, amount);

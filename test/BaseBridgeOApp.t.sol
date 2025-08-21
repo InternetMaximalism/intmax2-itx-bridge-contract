@@ -33,7 +33,7 @@ contract MockEndpointV2 {
         return MessagingFee({nativeFee: 0.01 ether, lzTokenFee: 0});
     }
 
-    function send(MessagingParams calldata _params, address /* _refundAddress */)
+    function send(MessagingParams calldata _params, address /* _refundAddress */ )
         external
         payable
         returns (MessagingReceipt memory)
@@ -284,18 +284,18 @@ contract BaseBridgeOAppTest is Test {
     function test_SetBridgeStorageEmitsEvent() public {
         address newBridgeStorage = address(new BridgeStorage(owner));
         address oldStorage = address(bridgeStorage);
-        
+
         // Expect BridgeStorageUpdated event
         vm.expectEmit(true, true, false, true);
         emit IBaseBridgeOApp.BridgeStorageUpdated(oldStorage, newBridgeStorage);
-        
+
         vm.prank(owner);
         baseBridge.setBridgeStorage(newBridgeStorage);
     }
 
     function test_SetBridgeStorageRevertNotOwner() public {
         address newBridgeStorage = address(new BridgeStorage(owner));
-        
+
         vm.prank(user);
         vm.expectRevert();
         baseBridge.setBridgeStorage(newBridgeStorage);

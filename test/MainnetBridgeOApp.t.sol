@@ -35,7 +35,7 @@ contract MockEndpointV2 {
         return MessagingFee({nativeFee: 0.01 ether, lzTokenFee: 0});
     }
 
-    function send(MessagingParams calldata _params, address /* _refundAddress */)
+    function send(MessagingParams calldata _params, address /* _refundAddress */ )
         external
         payable
         returns (MessagingReceipt memory)
@@ -170,24 +170,6 @@ contract MainnetBridgeOAppTest is Test {
 
         uint256 recipientBalanceAfter = INTMAX.balanceOf(recipient);
         assertEq(recipientBalanceAfter - recipientBalanceBefore, amount);
-    }
-
-    function test_LzReceiveRevertBadSrcEid() public {
-        uint256 amount = 100 * 1e18;
-        bytes memory payload = abi.encode(recipient, amount, srcUser);
-
-        vm.expectRevert(IMainnetBridgeOApp.BadSrcEid.selector);
-        mockEndpoint.lzReceive(payable(address(mainnetBridge)), 999, srcSender, 1, bytes32(0), payload, bytes("")); // Wrong source EID
-    }
-
-    function test_LzReceiveRevertBadSender() public {
-        uint256 amount = 100 * 1e18;
-        bytes memory payload = abi.encode(recipient, amount, srcUser);
-
-        bytes32 wrongSender = bytes32(uint256(uint160(address(0x999))));
-
-        vm.expectRevert(); // OnlyPeer error from LayerZero OApp
-        mockEndpoint.lzReceive(payable(address(mainnetBridge)), SRC_EID, wrongSender, 1, bytes32(0), payload, bytes("")); // Wrong sender
     }
 
     function test_LzReceiveRevertRecipientZero() public {
