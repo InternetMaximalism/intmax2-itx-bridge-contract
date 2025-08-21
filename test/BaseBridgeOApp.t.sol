@@ -8,8 +8,7 @@ import {IBaseBridgeOApp} from "../src/interfaces/IBaseBridgeOApp.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {MessagingFee, MessagingReceipt} from "@layerzerolabs/oapp/contracts/oapp/OApp.sol";
 import {
-    MessagingParams,
-    Origin
+    MessagingParams, Origin
 } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
 
 // Enhanced MockEndpoint with more realistic LayerZero functionality
@@ -19,22 +18,22 @@ contract MockEndpointV2 {
     mapping(uint32 => address) public defaultSendLibrary;
     mapping(uint32 => address) public defaultReceiveLibrary;
     mapping(uint32 => mapping(address => bytes32)) public peers;
-    
+
     event PacketSent(uint32 dstEid, address sender, bytes32 receiver, bytes message, MessagingFee fee);
-    
+
     constructor(uint32 _eid) {
         eid = _eid;
     }
-    
+
     function setDelegate(address _delegate) external {
         delegates[_delegate] = true;
     }
-    
+
     function quote(MessagingParams calldata, address) external pure returns (MessagingFee memory) {
         return MessagingFee({nativeFee: 0.01 ether, lzTokenFee: 0});
     }
-    
-    function send(MessagingParams calldata _params, address _refundAddress)
+
+    function send(MessagingParams calldata _params, address /* _refundAddress */)
         external
         payable
         returns (MessagingReceipt memory)
@@ -43,7 +42,7 @@ contract MockEndpointV2 {
         emit PacketSent(_params.dstEid, msg.sender, _params.receiver, _params.message, fee);
         return MessagingReceipt({guid: keccak256(abi.encode(_params, block.timestamp)), nonce: 1, fee: fee});
     }
-    
+
     function lzReceive(
         Origin calldata _origin,
         address _receiver,
@@ -53,11 +52,11 @@ contract MockEndpointV2 {
     ) external payable {
         // Mock implementation for testing
     }
-    
+
     function setDefaultSendLibrary(uint32 _dstEid, address _newLib) external {
         defaultSendLibrary[_dstEid] = _newLib;
     }
-    
+
     function setDefaultReceiveLibrary(uint32 _dstEid, address _newLib, uint256) external {
         defaultReceiveLibrary[_dstEid] = _newLib;
     }
@@ -205,7 +204,7 @@ contract BaseBridgeOAppTest is Test {
 
     function test_QuoteBridge() public {
         vm.prank(user);
-        MessagingFee memory fee = baseBridge.quoteBridge(recipient);
+        MessagingFee memory fee = baseBridge.quoteBridge();
 
         // Fee should be greater than 0
         assertGt(fee.nativeFee, 0);
@@ -216,17 +215,11 @@ contract BaseBridgeOAppTest is Test {
         assertEq(fee.nativeFee, 0.01 ether);
     }
 
-    function test_QuoteBridgeRevertRecipientZero() public {
-        vm.prank(user);
-        vm.expectRevert(IBaseBridgeOApp.RecipientZero.selector);
-        baseBridge.quoteBridge(address(0));
-    }
-
     function test_QuoteBridgeRevertNoDelta() public {
         INTMAX.setBalance(user, 0); // No tokens
         vm.prank(user);
         vm.expectRevert(IBaseBridgeOApp.BalanceLessThanBridged.selector); // 0 <= 0 fails current > prev check
-        baseBridge.quoteBridge(recipient);
+        baseBridge.quoteBridge();
     }
 
     function test_QuoteBridgeRevertActualNoDelta() public {
@@ -237,7 +230,7 @@ contract BaseBridgeOAppTest is Test {
         // Now current == prev, so current > prev fails first
         vm.prank(user);
         vm.expectRevert(IBaseBridgeOApp.BalanceLessThanBridged.selector);
-        baseBridge.quoteBridge(recipient);
+        baseBridge.quoteBridge();
     }
 
     function test_QuoteBridgeRevertBalanceLessThanBridged() public {
@@ -250,7 +243,7 @@ contract BaseBridgeOAppTest is Test {
 
         vm.prank(user);
         vm.expectRevert(IBaseBridgeOApp.BalanceLessThanBridged.selector);
-        baseBridge.quoteBridge(recipient);
+        baseBridge.quoteBridge();
     }
 
     function test_BridgeToReentrancyProtection() public {
@@ -266,6 +259,26 @@ contract BaseBridgeOAppTest is Test {
         // by verifying the modifier works as expected
         bool success = reentrancyTest.testReentrancy();
         assertTrue(success, "Reentrancy protection should be working");
+    }
+
+    function test_TransferStorageOwnershipSuccess() public {
+        address newOwner = address(0x999);
+
+        // Only owner should be able to call transferStorageOwnership
+        vm.prank(owner);
+        baseBridge.transferStorageOwnership(newOwner);
+
+        // This test verifies that the function can be called without error
+        // The actual BridgeStorage functionality is tested in BridgeStorage.t.sol
+    }
+
+    function test_TransferStorageOwnershipRevertNotOwner() public {
+        address newOwner = address(0x999);
+
+        // Non-owner should not be able to transfer storage ownership
+        vm.prank(user);
+        vm.expectRevert();
+        baseBridge.transferStorageOwnership(newOwner);
     }
 }
 

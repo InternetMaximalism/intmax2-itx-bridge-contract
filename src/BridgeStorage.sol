@@ -28,4 +28,9 @@ contract BridgeStorage is Ownable, IBridgeStorage {
     function getBridgedAmount(address user) external view returns (uint256) {
         return _bridgedAmount[user];
     }
+
+    function transferStorageOwnership(address newOwner) external onlyOwner {
+        require(newOwner != address(0), InvalidAddress());
+        _transferOwnership(newOwner);
+    }
 }

@@ -31,16 +31,13 @@ contract BaseBridgeOApp is OAppSender, ReentrancyGuard, IBaseBridgeOApp {
     }
 
     /**
-     * @notice Get the estimated fee for bridging to recipient
-     * @param recipient The recipient address on destination chain
+     * @notice Get the estimated fee for bridging
      * @return fee The estimated messaging fee
      */
-    function quoteBridge(address recipient) external view returns (MessagingFee memory fee) {
-        require(recipient != address(0), RecipientZero());
-
+    function quoteBridge() external view returns (MessagingFee memory fee) {
         (, uint256 delta) = _getCurrentAndDelta();
 
-        bytes memory payload = abi.encode(recipient, delta, _msgSender());
+        bytes memory payload = abi.encode(address(1), delta, _msgSender());
         bytes memory options = bytes("");
 
         return _quote(DST_EID, payload, options, false);
@@ -49,6 +46,10 @@ contract BaseBridgeOApp is OAppSender, ReentrancyGuard, IBaseBridgeOApp {
     function setBridgeStorage(address _bridgeStorage) external onlyOwner {
         require(_bridgeStorage != address(0), InvalidBridgeStorage());
         bridgeStorage = IBridgeStorage(_bridgeStorage);
+    }
+
+    function transferStorageOwnership(address newOwner) external onlyOwner {
+        bridgeStorage.transferStorageOwnership(newOwner);
     }
 
     function bridgeTo(address recipient) external payable nonReentrant {

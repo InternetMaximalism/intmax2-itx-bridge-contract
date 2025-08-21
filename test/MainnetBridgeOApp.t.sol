@@ -12,7 +12,7 @@ import {
     MessagingReceipt
 } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
 
-// Enhanced MockEndpoint with more realistic LayerZero functionality  
+// Enhanced MockEndpoint with more realistic LayerZero functionality
 contract MockEndpointV2 {
     uint32 public eid;
     mapping(address => mapping(uint32 => mapping(bytes32 => mapping(uint64 => bytes32)))) public inboundPayloadHash;
@@ -20,9 +20,9 @@ contract MockEndpointV2 {
     mapping(address => bool) public delegates;
     mapping(uint32 => address) public defaultSendLibrary;
     mapping(uint32 => address) public defaultReceiveLibrary;
-    
+
     event PacketSent(uint32 dstEid, address sender, bytes32 receiver, bytes message, MessagingFee fee);
-    
+
     constructor(uint32 _eid) {
         eid = _eid;
     }
@@ -35,7 +35,7 @@ contract MockEndpointV2 {
         return MessagingFee({nativeFee: 0.01 ether, lzTokenFee: 0});
     }
 
-    function send(MessagingParams calldata _params, address _refundAddress)
+    function send(MessagingParams calldata _params, address /* _refundAddress */)
         external
         payable
         returns (MessagingReceipt memory)

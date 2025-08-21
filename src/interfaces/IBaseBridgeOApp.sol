@@ -28,11 +28,10 @@ interface IBaseBridgeOApp {
     event BridgeRequested(address indexed recipient, uint256 amount, address indexed user, MessagingReceipt receipt);
 
     /**
-     * @notice Get the estimated fee for bridging to recipient
-     * @param recipient The recipient address on destination chain
+     * @notice Get the estimated fee for bridging
      * @return fee The estimated messaging fee required for the bridge transaction
      */
-    function quoteBridge(address recipient) external view returns (MessagingFee memory fee);
+    function quoteBridge() external view returns (MessagingFee memory fee);
 
     /**
      * @notice Bridge tokens to a recipient on the destination chain
@@ -48,4 +47,12 @@ interface IBaseBridgeOApp {
      * @return The total amount of tokens bridged by the user
      */
     function bridgedAmount(address user) external view returns (uint256);
+
+    /**
+     * @notice Transfer ownership of the BridgeStorage contract
+     * @param newOwner The address of the new owner for BridgeStorage
+     * @dev Only callable by contract owner
+     * @dev Reverts if newOwner is the zero address
+     */
+    function transferStorageOwnership(address newOwner) external;
 }
