@@ -12,23 +12,37 @@ import {
     MessagingReceipt
 } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
 
-contract MockEndpoint {
+// Enhanced MockEndpoint with more realistic LayerZero functionality  
+contract MockEndpointV2 {
+    uint32 public eid;
     mapping(address => mapping(uint32 => mapping(bytes32 => mapping(uint64 => bytes32)))) public inboundPayloadHash;
     mapping(address => bool) public cleared;
+    mapping(address => bool) public delegates;
+    mapping(uint32 => address) public defaultSendLibrary;
+    mapping(uint32 => address) public defaultReceiveLibrary;
+    
+    event PacketSent(uint32 dstEid, address sender, bytes32 receiver, bytes message, MessagingFee fee);
+    
+    constructor(uint32 _eid) {
+        eid = _eid;
+    }
 
-    function setDelegate(address) external {}
+    function setDelegate(address _delegate) external {
+        delegates[_delegate] = true;
+    }
 
     function quote(MessagingParams calldata, address) external pure returns (MessagingFee memory) {
         return MessagingFee({nativeFee: 0.01 ether, lzTokenFee: 0});
     }
 
-    function send(MessagingParams calldata, /*_params*/ address /*_refundAddress*/ )
+    function send(MessagingParams calldata _params, address _refundAddress)
         external
         payable
         returns (MessagingReceipt memory)
     {
         MessagingFee memory fee = MessagingFee({nativeFee: msg.value, lzTokenFee: 0});
-        return MessagingReceipt({guid: bytes32(0), nonce: 1, fee: fee});
+        emit PacketSent(_params.dstEid, msg.sender, _params.receiver, _params.message, fee);
+        return MessagingReceipt({guid: keccak256(abi.encode(_params, block.timestamp)), nonce: 1, fee: fee});
     }
 
     function lzReceive(
@@ -113,7 +127,7 @@ contract MockINTMAXToken is IERC20 {
 contract MainnetBridgeOAppTest is Test {
     MainnetBridgeOApp public mainnetBridge;
     MockINTMAXToken public INTMAX;
-    MockEndpoint public mockEndpoint;
+    MockEndpointV2 public mockEndpoint;
     address public owner = address(0x1);
     address public srcUser = address(0x2);
     address public recipient = address(0x3);
@@ -123,7 +137,7 @@ contract MainnetBridgeOAppTest is Test {
     function setUp() public {
         INTMAX = new MockINTMAXToken();
         srcSender = bytes32(uint256(uint160(address(0x4)))); // Mock Base OApp address
-        mockEndpoint = new MockEndpoint();
+        mockEndpoint = new MockEndpointV2(2); // Mainnet EID
 
         mainnetBridge = new MainnetBridgeOApp(
             address(mockEndpoint), // endpoint
