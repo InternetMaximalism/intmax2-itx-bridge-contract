@@ -6,17 +6,38 @@ import {MainnetBridgeOApp} from "../src/MainnetBridgeOApp.sol";
 
 contract DeployMainnetBridge is Script {
     function run() external {
-        // Sepolia configuration
-        address endpoint = 0x6EDCE65403992e310A62460808c4b910D972f10f; // LayerZero V2 Endpoint Sepolia
-        address token = 0xA78B3d7db31EC214a33c5C383B606DA8B87DF41F; // Sepolia ITX token
-        uint32 srcEid = 40245; // Base Sepolia EID for LayerZero V2
+        // Load configuration from environment variables
+        address endpoint = vm.envAddress("MAINNET_ENDPOINT");
+        address token = vm.envAddress("MAINNET_TOKEN");
+        uint32 srcEid = uint32(vm.envUint("MAINNET_SRC_EID"));
 
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(deployerPrivateKey);
 
-        // This should be set to the deployed Base Bridge address after deployment
-        address baseBridgeAddress = vm.envOr("BASE_BRIDGE_ADDRESS", address(0x0));
-        bytes32 srcSender = bytes32(uint256(uint160(baseBridgeAddress)));
+        // Load source sender from env, fallback to zero address if not set
+        bytes32 srcSender;
+        try vm.envBytes32("MAINNET_SRC_SENDER") returns (bytes32 envSrcSender) {
+            srcSender = envSrcSender;
+            console.log("Using source sender from env");
+        } catch {
+            // Try to get BASE_BRIDGE_ADDRESS and convert to bytes32
+            try vm.envAddress("BASE_BRIDGE_ADDRESS") returns (address baseBridgeAddress) {
+                srcSender = bytes32(uint256(uint160(baseBridgeAddress)));
+                console.log("Using BASE_BRIDGE_ADDRESS as source sender:", baseBridgeAddress);
+            } catch {
+                srcSender = bytes32(0);
+                console.log("Warning: No source sender set, using zero address");
+            }
+        }
+
+        // Display configuration
+        console.log("=== Mainnet Bridge Deployment Configuration ===");
+        console.log("Endpoint:", endpoint);
+        console.log("Token:", token);
+        console.log("Source EID:", srcEid);
+        console.log("Source Sender (address):", address(uint160(uint256(srcSender))));
+        console.log("Deployer:", deployer);
+        console.log("==============================================");
 
         vm.startBroadcast(deployerPrivateKey);
 
@@ -28,12 +49,10 @@ contract DeployMainnetBridge is Script {
             srcEid,
             srcSender
         );
-        console.log("Mainnet Bridge deployed to:", address(mainnetBridge));
-        console.log("Endpoint:", endpoint);
-        console.log("Token:", token);
-        console.log("Source EID:", srcEid);
-        console.log("Source Sender:", baseBridgeAddress);
-        console.log("Owner:", deployer);
+        
+        console.log("=== Deployment Summary ===");
+        console.log("MainnetBridgeOApp:", address(mainnetBridge));
+        console.log("=========================");
 
         vm.stopBroadcast();
     }
