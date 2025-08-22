@@ -143,9 +143,7 @@ contract MainnetBridgeOAppTest is Test {
             address(mockEndpoint), // endpoint
             owner, // delegate
             owner, // owner
-            address(INTMAX), // token
-            SRC_EID,
-            srcSender
+            address(INTMAX) // token
         );
 
         // Set peer so OAppCore._getPeerOrRevert won't revert during tests

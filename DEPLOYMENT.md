@@ -10,7 +10,7 @@ This guide explains how to deploy the Base Bridge and Mainnet Bridge contracts u
    ```
 
 2. **Required environment variables**:
-   - `PRIVATE_KEY`: Your deployment private key (without 0x prefix)
+   - `PRIVATE_KEY`: Your deployment private key (with 0x prefix)
    - Network-specific configurations (see below)
 
 ## Environment Variables
@@ -55,7 +55,7 @@ forge script script/DeployMainnetBridge.s.sol:DeployMainnetBridge --rpc-url <MAI
 
 ### Testnet (Base Sepolia ↔ Ethereum Sepolia)
 ```bash
-PRIVATE_KEY=your_private_key_here
+PRIVATE_KEY=0xyour_private_key_here
 
 # Base Sepolia
 BASE_ENDPOINT=0x6EDCE65403992e310A62460808c4b910D972f10f
@@ -75,7 +75,7 @@ GAS_LIMIT=200000
 
 ### Mainnet (Base ↔ Ethereum)
 ```bash
-PRIVATE_KEY=your_private_key_here
+PRIVATE_KEY=0xyour_private_key_here
 
 # Base Mainnet
 BASE_ENDPOINT=0x1a44076050125825900e736c501f859c50fE728c

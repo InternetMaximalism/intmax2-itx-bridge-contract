@@ -13,20 +13,12 @@ contract MainnetBridgeOApp is OAppReceiver, IMainnetBridgeOApp {
     using SafeERC20 for IERC20;
 
     IERC20 private immutable _TOKEN;
-    uint32 private immutable _SRC_EID;
-    bytes32 private immutable _SRC_SENDER;
 
-    constructor(
-        address _endpoint,
-        address _delegate,
-        address _owner,
-        address _token,
-        uint32 _srcEid,
-        bytes32 _srcSender
-    ) OAppCore(_endpoint, _delegate) Ownable(_owner) {
+    constructor(address _endpoint, address _delegate, address _owner, address _token)
+        OAppCore(_endpoint, _delegate)
+        Ownable(_owner)
+    {
         _TOKEN = IERC20(_token);
-        _SRC_EID = _srcEid;
-        _SRC_SENDER = _srcSender;
     }
 
     // Implement OAppReceiver internal hook and forward to mockLzReceive for testing.

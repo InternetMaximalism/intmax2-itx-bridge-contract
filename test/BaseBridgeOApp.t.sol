@@ -352,10 +352,40 @@ contract BaseBridgeOAppTest is Test {
         baseBridge.setGasLimit(newGasLimit);
     }
 
-    function test_SetGasLimitRevertZeroValue() public {
+    function test_SetGasLimitZeroValue() public {
         vm.prank(owner);
-        vm.expectRevert(IBaseBridgeOApp.InvalidGasLimit.selector);
         baseBridge.setGasLimit(0);
+
+        // Verify gas limit was set to 0
+        assertEq(baseBridge.gasLimit(), 0);
+    }
+
+    function test_GasLimitDefaultValue() public view {
+        // Verify that gasLimit is 0 by default
+        assertEq(baseBridge.gasLimit(), 0);
+    }
+
+    function test_QuoteBridgeWithZeroGasLimit() public {
+        // Gas limit should be 0 by default
+        assertEq(baseBridge.gasLimit(), 0);
+
+        vm.prank(user);
+        MessagingFee memory fee = baseBridge.quoteBridge();
+
+        // Should still work with zero gas limit
+        assertGt(fee.nativeFee, 0);
+        assertEq(fee.lzTokenFee, 0);
+    }
+
+    function test_BridgeToWithZeroGasLimit() public {
+        // Gas limit should be 0 by default
+        assertEq(baseBridge.gasLimit(), 0);
+
+        vm.prank(user);
+        baseBridge.bridgeTo{value: 0.01 ether}(recipient);
+
+        // Should work with zero gas limit (empty options)
+        assertEq(baseBridge.bridgedAmount(user), 1000 * 1e18);
     }
 }
 

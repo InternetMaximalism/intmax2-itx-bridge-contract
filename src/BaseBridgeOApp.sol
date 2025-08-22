@@ -17,7 +17,7 @@ contract BaseBridgeOApp is OAppSender, ReentrancyGuard, IBaseBridgeOApp {
     IERC20 private immutable TOKEN;
     uint32 private immutable DST_EID;
     IBridgeStorage public bridgeStorage;
-    uint128 public gasLimit = 200000;
+    uint128 public gasLimit;
 
     constructor(address _endpoint, address _delegate, address _owner, address _token, uint32 _dstEid)
         OAppCore(_endpoint, _delegate)
@@ -35,7 +35,6 @@ contract BaseBridgeOApp is OAppSender, ReentrancyGuard, IBaseBridgeOApp {
      * @dev Emits GasLimitUpdated event
      */
     function setGasLimit(uint128 _gasLimit) external onlyOwner {
-        require(_gasLimit > 0, InvalidGasLimit());
         uint128 oldLimit = gasLimit;
         gasLimit = _gasLimit;
         emit GasLimitUpdated(oldLimit, _gasLimit);
@@ -103,6 +102,9 @@ contract BaseBridgeOApp is OAppSender, ReentrancyGuard, IBaseBridgeOApp {
      * @return The encoded options for LayerZero message execution
      */
     function _getDefaultOptions() private view returns (bytes memory) {
+        if (gasLimit == 0) {
+            return "";
+        }
         return OptionsBuilder.addExecutorLzReceiveOption(OptionsBuilder.newOptions(), gasLimit, 0);
     }
 }

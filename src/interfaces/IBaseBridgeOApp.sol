@@ -19,9 +19,6 @@ interface IBaseBridgeOApp {
     /// @dev Thrown when an invalid bridge storage address is provided (e.g., zero address)
     error InvalidBridgeStorage();
 
-    /// @dev Thrown when an invalid gas limit is provided (e.g., zero or negative value)
-    error InvalidGasLimit();
-
     /**
      * @dev Emitted when the gas limit for LayerZero execution is updated
      * @param oldLimit The previous gas limit value

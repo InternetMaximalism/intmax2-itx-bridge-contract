@@ -154,3 +154,36 @@ $ forge fmt
 $ npm install
 npm run lint:fix
 ```
+
+
+
+testnet base
+  Bridge Storage deployed to: 0xa978eA3735B7508E6144F0a007F4f6B4f332DA65
+  Base Bridge deployed to: 
+  
+
+
+    # setPeer関数を呼び出す
+  cast send
+  0xa978eA3735B7508E6144F0a007F4f6B4f332DA65 \
+    "setPeer(uint32,bytes32)" \
+    40161 \
+
+  0x000000000000000000000000[MAINNET_BRIDGE_ADDRESS]
+   \
+    --rpc-url https://sepolia.base.org \
+    --private-key $PRIVATE_KEY
+
+  具体例
+
+  1. Endpoint ID: 40161 (Ethereum Sepolia)
+  2. Peer Address:
+  MainnetBridgeOAppのアドレスをbytes32に変換
+
+  アドレス変換の例：
+  # MainnetBridgeOAppのアドレスが 
+  0x1234567890123456789012345678901234567890 の場合
+  cast --to-bytes32
+  0x1234567890123456789012345678901234567890
+  # 結果: 0x0000000000000000000000001234567890123456
+  789012345678901234567890
