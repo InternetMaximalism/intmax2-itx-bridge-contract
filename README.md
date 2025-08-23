@@ -1,192 +1,219 @@
 # INTMAX2 ITX Bridge Contract
 
-LayerZeroを使用したBase↔Mainnet ITXトークンブリッジの実装。
+Implementation of Base↔Ethereum ITX token bridge using LayerZero v2.
 
-## 概要
+## Overview
 
-- **Base側**: 非transferableなINTMAXTokenLの残高を確認し、差分のみをMainnet側に送信
-- **Mainnet側**: Base側からのメッセージを受信し、指定されたアドレスにITXトークンを送金
+- **Base side**: Checks the balance of non-transferable INTMAX Token and sends only the difference to Ethereum side
+- **Ethereum side**: Receives messages from Base side and transfers ITX tokens to specified addresses
 
-## コントラクト構成
+## Contract Architecture
 
-### Base側
-- `BaseBridgeOApp.sol`: Base上のブリッジコントラクト（送信専用）
-- ユーザーのINTMAXTokenL残高と累計bridge量を比較し、増分のみを送信
+### Base Side
+- `BaseBridgeOApp.sol`: Bridge contract on Base (send-only)
+- `BridgeStorage.sol`: External storage to record users' bridged amounts
+- Compares user's INTMAX Token balance with cumulative bridge amount and sends only the increment
 
-### Mainnet側  
-- `MainnetBridgeOApp.sol`: Mainnet上のブリッジコントラクト（受信専用）
-- Base側からのメッセージを受信し、ITXトークンを配布
+### Ethereum Side  
+- `MainnetBridgeOApp.sol`: Bridge contract on Ethereum (receive-only)
+- Receives messages from Base side and distributes ITX tokens
 
-## 主要機能
+## Main Features
 
-### Base側機能
-- `bridgeTo(address recipient)`: 指定されたアドレスにITXトークンをブリッジ
-- 残高チェック、差分計算、LayerZero経由での送信
+### Base Side Functions
+- `bridgeTo(address recipient)`: Bridge ITX tokens to specified address
+- `quoteBridge()`: Estimate fees required for bridging
+- `setGasLimit(uint128 _gasLimit)`: Set LayerZero execution gas limit
+- `setBridgeStorage(address _bridgeStorage)`: Set external storage
 
-### Mainnet側機能
-- `mockLzReceive()`: LayerZeroからのメッセージ受信（テスト用）
-- 送信元検証、トークン配布
+### Ethereum Side Functions
+- `_lzReceive()`: Receive and process messages from LayerZero
+- `manualRetry()`: Manual retry for failed messages
+- `clearMessage()`: Clear problematic messages
 
-## テスト
+## Deployment
+
+### Environment Variables Setup
+
+Copy `.env.example` to create `.env` file and configure the following settings:
+
+```bash
+# deploy
+PRIVATE_KEY=0xyour_private_key_here
+
+## base
+BASE_ENDPOINT=0x6EDCE65403992e310A62460808c4b910D972f10f
+BASE_TOKEN=0xC79BB8DB83950b9c5AE5dF2E56bb502968EE6dB5
+BASE_DST_EID=11155111
+
+## mainnet
+MAINNET_ENDPOINT=0x6EDCE65403992e310A62460808c4b910D972f10f
+MAINNET_TOKEN=0xA78B3d7db31EC214a33c5C383B606DA8B87DF41F
+```
+
+**Configuration Values:**
+- `PRIVATE_KEY`: Private key for deployment (0x prefix required)
+- `BASE_ENDPOINT`: LayerZero Endpoint for Base Sepolia
+- `BASE_TOKEN`: ITX token address on Base Sepolia  
+- `BASE_DST_EID`: Destination Endpoint ID (Ethereum Sepolia = 11155111)
+- `MAINNET_ENDPOINT`: LayerZero Endpoint for Ethereum Sepolia
+- `MAINNET_TOKEN`: ITX token address on Ethereum Sepolia
+
+### Base Sepolia Deployment
+
+```bash
+forge script script/DeployBaseBridge.s.sol:DeployBaseBridge --rpc-url https://sepolia.base.org --broadcast --etherscan-api-key $BASESCAN_API_KEY --verify
+```
+
+### Sepolia Deployment
+
+```bash
+forge script script/DeployMainnetBridge.s.sol:DeployMainnetBridge --rpc-url https://sepolia.rpc.thirdweb.com --broadcast --etherscan-api-key $ETHERSCAN_API_KEY --verify
+```
+
+## Setup
+
+### 1. Peer Configuration
+
+Bidirectional peer connections must be configured:
+Execute setPeer function on each side.
+Specify the EID and OApp address of the communication partner.
+OApp address must be specified in bytes32 format.
+
+#### BaseBridgeOApp Side
+```bash
+# Peer setting with MainnetBridgeOApp
+cast send 0x5312f4968901Ec9d4fc43d2b0e437041614B14A2 \
+  "setPeer(uint32,bytes32)" \
+  40245 \
+  0x0000000000000000000000006B9eFE6980665B8462059D97C36674e26bc49298 \
+  --rpc-url https://sepolia.base.org \
+  --private-key $PRIVATE_KEY
+```
+
+#### MainnetBridgeOApp Side
+```bash
+# Peer setting with BaseBridgeOApp
+cast send 0x6B9eFE6980665B8462059D97C36674e26bc49298 \
+  "setPeer(uint32,bytes32)" \
+  40161 \
+  0x0000000000000000000000005312f4968901Ec9d4fc43d2b0e437041614B14A2 \
+  --rpc-url https://sepolia.rpc.thirdweb.com \
+  --private-key $PRIVATE_KEY
+```
+
+## Testing
 
 ```bash
 forge test
 ```
 
-### テスト内容
-- Base側: 正常なブリッジ、エラーハンドリング、部分的な増分処理
-- Mainnet側: メッセージ受信、送信元検証、エラーハンドリング
+### Test Coverage
+- Base side: Normal bridging, error handling, gas limit setting, external storage
+- Ethereum side: Message reception, source verification, manual retry
 
-## デプロイ
+## Deployed Addresses
 
-### Base Sepolia
+### Testnet (Sepolia Network)
+- **BaseBridgeOApp** (Base Sepolia): `0x5312f4968901Ec9d4fc43d2b0e437041614B14A2`
+- **BridgeStorage** (Base Sepolia): `0x871fAee277bC6D7A695566F6f60C22CD9d8714Ef`
+- **MainnetBridgeOApp** (Ethereum Sepolia): `0x6B9eFE6980665B8462059D97C36674e26bc49298`
+
+## Message Monitoring
+
+### Status Monitoring
+
+Get GUID from `BridgeRequested` event when executing `bridgeTo`, and monitor via LayerZero Scan API:
+
 ```bash
-forge script script/DeployBaseBridge.s.sol:DeployBaseBridge --rpc-url $BASE_SEPOLIA_RPC_URL --broadcast
+# Testnet
+GET https://scan-testnet.layerzero-api.com/v1/messages/guid/{guid}
+
+# Mainnet  
+GET https://scan.layerzero-api.com/v1/messages/guid/{guid}
 ```
 
-### Sepolia  
+Check status in `data[0]["status"]["name"]` of API response:
+
+### Message Status Types
+- `INFLIGHT`: Sending
+- `DELIVERED`: Delivery complete (normal completion)
+- `PAYLOAD_STORED`: Execution failed, retry required
+- `BLOCKED`: Previous message is stuck
+- `FAILED`: Send failed
+
+### Normal Flow
+`INFLIGHT` → `DELIVERED`
+
+## Emergency Response
+
+### PAYLOAD_STORED (Execution Failed)
 ```bash
-BASE_BRIDGE_ADDRESS=<deployed_base_bridge_address> forge script script/DeployMainnetBridge.s.sol:DeployMainnetBridge --rpc-url $SEPOLIA_RPC_URL --broadcast
+# Manual retry
+cast send 0x6B9eFE6980665B8462059D97C36674e26bc49298 \
+  "manualRetry((uint32,bytes32,uint64),bytes32,bytes,bytes)" \
+  "(srcEid,sender,nonce)" \
+  "guid" \
+  "message" \
+  "extraData" \
+  --rpc-url https://sepolia.rpc.thirdweb.com \
+  --private-key $PRIVATE_KEY
 ```
 
-## 設定
-
-### 環境変数
-- `PRIVATE_KEY`: デプロイ用秘密鍵
-- `BASE_SEPOLIA_RPC_URL`: Base Sepolia RPC URL
-- `SEPOLIA_RPC_URL`: Sepolia RPC URL  
-- `BASE_BRIDGE_ADDRESS`: デプロイ済みBaseブリッジアドレス
-
-### コントラクトアドレス
-
-#### Mainnet
-- Base: `0xf95117e3a5B7968703CeD3B66A9CbE0Bc9e1D8bf`
-- Ethereum: `0xe24e207c6156241cAfb41D025B3b5F0677114C81`
-
-#### Testnet
-- Base Sepolia: `0x2699CD7f883DecC464171a7A92f4CcC4eF220fa2`
-- Sepolia: `0xA78B3d7db31EC214a33c5C383B606DA8B87DF41F`
-
-## 実装上の注意点
-
-1. **送信元検証**: Mainnet側では送信元チェーンIDとOAppアドレスの両方を検証
-2. **ガス設定**: 受信側で必要なガス量を適切に設定する必要がある
-3. **リトライ/スタック**: LayerZero V2のリトライ機能を活用
-4. **Peer設定**: 両サイドでPeerアドレスを正しく設定する必要がある
-
-## セキュリティ考慮事項
-
-- 送信元の厳格な検証（srcEid + sender address）
-- 残高チェックによる過剰送信の防止  
-- ゼロアドレスへの送信防止
-- 権限制御（owner-only functions）
-
-# リトライ/スタック時の運用方法
-## ステータス監視
-BaseBridgeOAppのBridgeRequestedというイベントにguidが含まれているため、これを監視することでリトライやスタックの状態を確認できます。guidは送信ごとに一意であり、イベントが発火した際に確認できます。
-正常終了のものはDELIVERED。
-例えば24時間経ってもVERIFIEDだったり、いきなりFAILEDになったりする場合は、何らかの問題が発生している可能性があるので、対応を行います。
-nonceの順番が重要になってくるので、フロントを一旦止めてメンテナンスに入る、などの対応が必要かも。。。
-
-```
-GET https://scan.layerzero-api.com/v1/messages/${guid}
-GET https://scan-testnet.layerzero-api.com/v1/messages/${guid}
-
-# GUIDでメッセージを取得
-# 以下の文字列のいずれかが入る：
-# 'INFLIGHT'　送信中...
-# 'CONFIRMING'　確認中...
-# 'DELIVERED' メッセージ配信完了
-# 'VERIFIED'　検証済み（実行待ち）
-# 'FAILED'　送信失敗
-# 'PAYLOAD_STORED'　実行失敗 - 再試行が必要
-# 'BLOCKED'　ブロック中 - 前のメッセージの問題を解決する必要
+### BLOCKED (Message Blocked)
+```bash
+# Message clear (owner only)
+cast send 0x6B9eFE6980665B8462059D97C36674e26bc49298 \
+  "clearMessage((uint32,bytes32,uint64),bytes32,bytes)" \
+  "(srcEid,sender,nonce)" \
+  "guid" \
+  "message" \
+  --rpc-url https://sepolia.rpc.thirdweb.com \
+  --private-key $PRIVATE_KEY
 ```
 
-正常な流れは
-INFLIGHT→CONFIRMING→VERIFIED→DELIVERED
+## Security Features
 
-## 緊急対応
-FAILED->リトライ不可、クリアして直接トークンを送るなど手動対応。
-24時間(時間は運用相談)経ってもINFLIGHT、CONFIRMING：ほぼないが、もし発生したらLayerZero運営に連絡
-24時間(時間は運用相談)経ってもVERIFIED->Executorの問題。手動リトライ。
-PAYLOAD_STORED-> DVNによる検証は完了したが、_lzReceive()の実行でrevert、hasStoredPayloadを実行し、trueならばmanualRetry、そうでなければパラメータが間違っている可能性大きい
-BLOCKED->前のnonceのメッセージが処理されていないため配信ブロック、前のメッセージをクリアするなり、manualRetryしたりする
+- Strict source verification (srcEid + sender address)
+- Prevention of excessive sending through balance checks  
+- Prevention of sending to zero address
+- Access control (owner-only functions)
+- Reentrancy attack protection
+- Upgrade compatibility through external storage pattern
 
-manualRetry->MainnetBridgeOAppのmanualRetry関数
-    // messageはbaseで使用したもの
-    // extra dataはapiで取得
+## Technical Specifications
 
-クリア->MainnetBridgeOAppのclear関数
-hasStoredPayloa->MainnetBridgeOAppのhasStoredPayload関数
+- **Solidity**: 0.8.30
+- **LayerZero**: v2
+- **OpenZeppelin**: Ownable, SafeERC20, ReentrancyGuard
+- **Default Gas Limit**: 200,000 (configurable)
 
-        // receipt
-// struct MessagingReceipt {
-//     bytes32 guid;
-//     uint64 nonce;
-//     MessagingFee fee;
-// }
-// struct Origin {
-//     uint32 srcEid; // baseのeid
-//     bytes32 sender; // baseのoappのアドレス
-//     uint64 nonce; // nonce
-// }
-
-## Foundry Usage
+## Development Commands
 
 ### Build
-```shell
-$ forge build
+```bash
+forge build
 ```
 
 ### Test
-```shell
-$ forge test
+```bash
+forge test
 ```
 
 ### Format
-```shell
-$ forge fmt
+```bash
+forge fmt
 ```
 
-### lint
-```shell
-$ npm install
+### Lint
+```bash
+npm install
 npm run lint:fix
 ```
 
+## LayerZero Endpoint IDs
 
-
-testnet base
-  Bridge Storage deployed to: 0x871fAee277bC6D7A695566F6f60C22CD9d8714Ef
-  Base Bridge deployed to: 0x5312f4968901Ec9d4fc43d2b0e437041614B14A2
-  MainnetBridgeOApp: 0x6B9eFE6980665B8462059D97C36674e26bc49298
-
-
-    # setPeer関数を呼び出す
-  cast send
-  0xa978eA3735B7508E6144F0a007F4f6B4f332DA65 \
-    "setPeer(uint32,bytes32)" \
-    40161 \
-
-  0x000000000000000000000000[MAINNET_BRIDGE_ADDRESS]
-   \
-    --rpc-url https://sepolia.base.org \
-    --private-key $PRIVATE_KEY
-
-  具体例
-
-  1. Endpoint ID: 40161 (Ethereum Sepolia)
-  2. Peer Address:
-  MainnetBridgeOAppのアドレスをbytes32に変換
-
-  アドレス変換の例：
-  # MainnetBridgeOAppのアドレスが 
-  0x1234567890123456789012345678901234567890 の場合
-  cast --to-bytes32
-  0x1234567890123456789012345678901234567890
-  # 結果: 0x0000000000000000000000001234567890123456
-  789012345678901234567890
-
-
-  デプロイの時オーナーとjかは適当だから気をつけてね
+- **Base Sepolia**: 84532
+- **Ethereum Sepolia**: 11155111
+- **Base Mainnet**: 184
+- **Ethereum Mainnet**: 30101
