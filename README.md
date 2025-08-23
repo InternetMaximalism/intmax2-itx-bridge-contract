@@ -158,9 +158,9 @@ npm run lint:fix
 
 
 testnet base
-  Bridge Storage deployed to: 0xa978eA3735B7508E6144F0a007F4f6B4f332DA65
-  Base Bridge deployed to: 
-  
+  Bridge Storage deployed to: 0x871fAee277bC6D7A695566F6f60C22CD9d8714Ef
+  Base Bridge deployed to: 0x5312f4968901Ec9d4fc43d2b0e437041614B14A2
+  MainnetBridgeOApp: 0x6B9eFE6980665B8462059D97C36674e26bc49298
 
 
     # setPeer関数を呼び出す
@@ -187,3 +187,6 @@ testnet base
   0x1234567890123456789012345678901234567890
   # 結果: 0x0000000000000000000000001234567890123456
   789012345678901234567890
+
+
+  デプロイの時オーナーとjかは適当だから気をつけてね
