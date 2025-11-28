@@ -158,6 +158,7 @@ contract INTMAXTokenLV2 is ERC20, AccessControl, IINTMAXToken {
         uint256 totalReward = 0;
         uint256 rewardPerDay = PHASE0_REWARD_PER_DAY;
 
+        // solhint-disable-next-line gas-increment-by-one
         for (uint256 i = 0; i < NUM_PHASES; i++) {
             uint256 phaseDays = PHASE0_PERIOD << i;
             if (elapsedDays < phaseDays) {

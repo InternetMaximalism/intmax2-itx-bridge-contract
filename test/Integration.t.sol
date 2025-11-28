@@ -129,6 +129,7 @@ contract IntegrationTest is Test {
     }
 
     function test_MultipleBridgeOperations() public {
+        vm.prank(user);
         senderBridge.bridgeTo{value: 0.01 ether}(recipient);
         assertEq(senderBridge.bridgedAmount(user), 1000 * 1e18);
 

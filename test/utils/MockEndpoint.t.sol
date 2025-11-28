@@ -34,6 +34,7 @@ contract MockEndpointV2 {
 
     // Compatibility shims: accept raw params as bytes when MessagingParams type isn't available
     // Typed struct matching OApp MessagingParams ABI
+    // solhint-disable-next-line gas-struct-packing
     struct MessagingParams {
         uint32 dstEid;
         bytes32 receiver;
@@ -111,7 +112,7 @@ contract MockEndpointV2 {
         );
 
         if (!ok) {
-            // Bubble up revert reason
+            /* solhint-disable no-inline-assembly, gas-custom-errors */
             if (ret.length > 0) {
                 assembly {
                     let retval_size := mload(ret)
@@ -119,6 +120,7 @@ contract MockEndpointV2 {
                 }
             }
             revert("lzReceive forward failed");
+            /* solhint-enable no-inline-assembly, gas-custom-errors */
         }
     }
 
@@ -143,6 +145,7 @@ contract MockEndpointV2 {
         );
 
         if (!ok) {
+            /* solhint-disable no-inline-assembly, gas-custom-errors */
             if (ret.length > 0) {
                 assembly {
                     let retval_size := mload(ret)
@@ -150,6 +153,7 @@ contract MockEndpointV2 {
                 }
             }
             revert("lzReceive forward failed");
+            /* solhint-enable no-inline-assembly, gas-custom-errors */
         }
     }
 
