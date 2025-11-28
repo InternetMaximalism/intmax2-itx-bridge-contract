@@ -28,7 +28,11 @@ contract ReceiverBridgeOApp is OAppReceiver, IReceiverBridgeOApp {
         bytes calldata _message,
         address, /*_executor*/
         bytes calldata /*_extraData*/
-    ) internal virtual override {
+    )
+        internal
+        virtual
+        override
+    {
         // For compatibility, decode the same payload and validate source
         (address recipient, uint256 amount, address srcUser) = abi.decode(_message, (address, uint256, address));
 

@@ -48,7 +48,10 @@ contract MockEndpointV2 {
         return MessagingFee({nativeFee: 0.01 ether, lzTokenFee: 0});
     }
 
-    function send(MessagingParams calldata _params, address /* _refundAddress */ )
+    function send(
+        MessagingParams calldata _params,
+        address /* _refundAddress */
+    )
         external
         payable
         returns (MessagingReceipt memory)
@@ -70,7 +73,10 @@ contract MockEndpointV2 {
         return MessagingFee({nativeFee: 0.01 ether, lzTokenFee: 0});
     }
 
-    function send(bytes calldata _params, address /* _refundAddress */ )
+    function send(
+        bytes calldata _params,
+        address /* _refundAddress */
+    )
         external
         payable
         returns (MessagingReceipt memory)

@@ -77,7 +77,12 @@ contract SenderBridgeOApp is OAppSender, ReentrancyGuard, ISenderBridgeOApp {
         bytes memory payload = abi.encode(recipient, delta, _msgSender());
         // see https://docs.layerzero.network/v2/tools/sdks/options#evm-solidity
         bytes memory options = _getDefaultOptions();
-        MessagingFee memory fee = _quote(DST_EID, payload, options, false /* only Ethereum */ );
+        MessagingFee memory fee = _quote(
+            DST_EID,
+            payload,
+            options,
+            false /* only Ethereum */
+        );
         require(msg.value >= fee.nativeFee, InsufficientNativeFee());
         MessagingReceipt memory receipt = _lzSend(
             DST_EID,

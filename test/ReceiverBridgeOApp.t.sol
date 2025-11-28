@@ -35,7 +35,10 @@ contract MockEndpointV2 {
         return MessagingFee({nativeFee: 0.01 ether, lzTokenFee: 0});
     }
 
-    function send(MessagingParams calldata _params, address /* _refundAddress */ )
+    function send(
+        MessagingParams calldata _params,
+        address /* _refundAddress */
+    )
         external
         payable
         returns (MessagingReceipt memory)
@@ -66,12 +69,20 @@ contract MockEndpointV2 {
         bytes calldata _extraData
     ) external {
         // Call the OApp's lzReceive function
-        ReceiverBridgeOApp(_oapp).lzReceive(
-            Origin({srcEid: _srcEid, sender: _sender, nonce: _nonce}), _guid, _message, address(this), _extraData
-        );
+        ReceiverBridgeOApp(_oapp)
+            .lzReceive(
+                Origin({srcEid: _srcEid, sender: _sender, nonce: _nonce}), _guid, _message, address(this), _extraData
+            );
     }
 
-    function clear(address _oapp, Origin calldata, /* _origin */ bytes32, /* _guid */ bytes calldata /* _message */ )
+    function clear(
+        address _oapp,
+        Origin calldata,
+        /* _origin */
+        bytes32,
+        /* _guid */
+        bytes calldata /* _message */
+    )
         external
     {
         cleared[_oapp] = true;
