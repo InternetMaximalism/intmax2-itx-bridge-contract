@@ -5,11 +5,11 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {OAppReceiver, OAppCore, Origin} from "@layerzerolabs/oapp/contracts/oapp/OAppReceiver.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {IMainnetBridgeOApp} from "./interfaces/IMainnetBridgeOApp.sol";
+import {IReceiverBridgeOApp} from "./interfaces/IReceiverBridgeOApp.sol";
 
 // Not to be UPGRADABLE because there are no internal variables
 // and there is a token rescue function in case something goes wrong.
-contract MainnetBridgeOApp is OAppReceiver, IMainnetBridgeOApp {
+contract ReceiverBridgeOApp is OAppReceiver, IReceiverBridgeOApp {
     using SafeERC20 for IERC20;
 
     IERC20 private immutable _TOKEN;

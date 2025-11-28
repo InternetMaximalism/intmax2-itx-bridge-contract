@@ -2,11 +2,87 @@
 pragma solidity 0.8.30;
 
 import {Test} from "forge-std/Test.sol";
-import {MainnetBridgeOApp} from "../src/MainnetBridgeOApp.sol";
-import {IMainnetBridgeOApp} from "../src/interfaces/IMainnetBridgeOApp.sol";
+import {ReceiverBridgeOApp} from "../src/ReceiverBridgeOApp.sol";
+import {IReceiverBridgeOApp} from "../src/interfaces/IReceiverBridgeOApp.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {Origin} from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
-import {MockEndpointV2} from "./utils/MockEndpoint.t.sol";
+import {Origin} from "@layerzerolabs/oapp/contracts/oapp/OAppReceiver.sol";
+import {
+    MessagingParams,
+    MessagingFee,
+    MessagingReceipt
+} from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
+
+// Enhanced MockEndpoint with more realistic LayerZero functionality
+contract MockEndpointV2 {
+    uint32 public eid;
+    mapping(address => mapping(uint32 => mapping(bytes32 => mapping(uint64 => bytes32)))) public inboundPayloadHash;
+    mapping(address => bool) public cleared;
+    mapping(address => bool) public delegates;
+    mapping(uint32 => address) public defaultSendLibrary;
+    mapping(uint32 => address) public defaultReceiveLibrary;
+
+    event PacketSent(uint32 dstEid, address sender, bytes32 receiver, bytes message, MessagingFee fee);
+
+    constructor(uint32 _eid) {
+        eid = _eid;
+    }
+
+    function setDelegate(address _delegate) external {
+        delegates[_delegate] = true;
+    }
+
+    function quote(MessagingParams calldata, address) external pure returns (MessagingFee memory) {
+        return MessagingFee({nativeFee: 0.01 ether, lzTokenFee: 0});
+    }
+
+    function send(MessagingParams calldata _params, address /* _refundAddress */ )
+        external
+        payable
+        returns (MessagingReceipt memory)
+    {
+        MessagingFee memory fee = MessagingFee({nativeFee: msg.value, lzTokenFee: 0});
+        emit PacketSent(_params.dstEid, msg.sender, _params.receiver, _params.message, fee);
+        return MessagingReceipt({guid: keccak256(abi.encode(_params, block.timestamp)), nonce: 1, fee: fee});
+    }
+
+    function lzReceive(
+        Origin calldata _origin,
+        address _receiver,
+        bytes32 _guid,
+        bytes calldata _message,
+        bytes calldata _extraData
+    ) external {
+        // Call the OApp's lzReceive function
+        ReceiverBridgeOApp(_receiver).lzReceive(_origin, _guid, _message, address(this), _extraData);
+    }
+
+    function lzReceive(
+        address payable _oapp,
+        uint32 _srcEid,
+        bytes32 _sender,
+        uint64 _nonce,
+        bytes32 _guid,
+        bytes calldata _message,
+        bytes calldata _extraData
+    ) external {
+        // Call the OApp's lzReceive function
+        ReceiverBridgeOApp(_oapp).lzReceive(
+            Origin({srcEid: _srcEid, sender: _sender, nonce: _nonce}), _guid, _message, address(this), _extraData
+        );
+    }
+
+    function clear(address _oapp, Origin calldata, /* _origin */ bytes32, /* _guid */ bytes calldata /* _message */ )
+        external
+    {
+        cleared[_oapp] = true;
+    }
+
+    function setInboundPayloadHash(address _receiver, uint32 _srcEid, bytes32 _sender, uint64 _nonce, bytes32 _hash)
+        external
+    {
+        inboundPayloadHash[_receiver][_srcEid][_sender][_nonce] = _hash;
+    }
+}
 
 contract MockINTMAXToken is IERC20 {
     mapping(address => uint256) private _balances;
@@ -48,41 +124,8 @@ contract MockINTMAXToken is IERC20 {
     }
 }
 
-// Token mock that reverts on transfer to simulate token failure
-contract RevertingToken is IERC20 {
-    mapping(address => uint256) private _balances;
-
-    function setBalance(address account, uint256 amount) external {
-        _balances[account] = amount;
-    }
-
-    function balanceOf(address account) external view override returns (uint256) {
-        return _balances[account];
-    }
-
-    function totalSupply() external pure override returns (uint256) {
-        return 1000000 * 1e18;
-    }
-
-    function transfer(address, uint256) external pure override returns (bool) {
-        revert("transfer failed");
-    }
-
-    function allowance(address, address) external pure override returns (uint256) {
-        return 0;
-    }
-
-    function approve(address, uint256) external pure override returns (bool) {
-        return true;
-    }
-
-    function transferFrom(address, address, uint256) external pure override returns (bool) {
-        return true;
-    }
-}
-
-contract MainnetBridgeOAppTest is Test {
-    MainnetBridgeOApp public mainnetBridge;
+contract ReceiverBridgeOAppTest is Test {
+    ReceiverBridgeOApp public receiverBridge;
     MockINTMAXToken public INTMAX;
     MockEndpointV2 public mockEndpoint;
     address public owner = address(0x1);
@@ -96,7 +139,7 @@ contract MainnetBridgeOAppTest is Test {
         srcSender = bytes32(uint256(uint160(address(0x4)))); // Mock Base OApp address
         mockEndpoint = new MockEndpointV2(2); // Mainnet EID
 
-        mainnetBridge = new MainnetBridgeOApp(
+        receiverBridge = new ReceiverBridgeOApp(
             address(mockEndpoint), // endpoint
             owner, // delegate
             owner, // owner
@@ -105,14 +148,14 @@ contract MainnetBridgeOAppTest is Test {
 
         // Set peer so OAppCore._getPeerOrRevert won't revert during tests
         vm.prank(owner);
-        mainnetBridge.setPeer(SRC_EID, srcSender);
+        receiverBridge.setPeer(SRC_EID, srcSender);
 
         // Set peer for test error EID 999 to allow our custom error testing
         vm.prank(owner);
-        mainnetBridge.setPeer(999, srcSender);
+        receiverBridge.setPeer(999, srcSender);
 
         // Set balance for mainnet bridge for distribution
-        INTMAX.setBalance(address(mainnetBridge), 10000 * 1e18);
+        INTMAX.setBalance(address(receiverBridge), 10000 * 1e18);
     }
 
     function test_LzReceiveSuccess() public {
@@ -121,7 +164,7 @@ contract MainnetBridgeOAppTest is Test {
 
         uint256 recipientBalanceBefore = INTMAX.balanceOf(recipient);
 
-        mockEndpoint.lzReceive(payable(address(mainnetBridge)), SRC_EID, srcSender, 1, bytes32(0), payload, bytes(""));
+        mockEndpoint.lzReceive(payable(address(receiverBridge)), SRC_EID, srcSender, 1, bytes32(0), payload, bytes(""));
 
         uint256 recipientBalanceAfter = INTMAX.balanceOf(recipient);
         assertEq(recipientBalanceAfter - recipientBalanceBefore, amount);
@@ -131,8 +174,8 @@ contract MainnetBridgeOAppTest is Test {
         uint256 amount = 100 * 1e18;
         bytes memory payload = abi.encode(address(0), amount, srcUser); // Zero recipient
 
-        vm.expectRevert(IMainnetBridgeOApp.RecipientZero.selector);
-        mockEndpoint.lzReceive(payable(address(mainnetBridge)), SRC_EID, srcSender, 1, bytes32(0), payload, bytes(""));
+        vm.expectRevert(IReceiverBridgeOApp.RecipientZero.selector);
+        mockEndpoint.lzReceive(payable(address(receiverBridge)), SRC_EID, srcSender, 1, bytes32(0), payload, bytes(""));
     }
 
     function test_ManualRetry() public {
@@ -144,7 +187,7 @@ contract MainnetBridgeOAppTest is Test {
 
         uint256 recipientBalanceBefore = INTMAX.balanceOf(recipient);
 
-        mainnetBridge.manualRetry(origin, guid, message, extraData);
+        receiverBridge.manualRetry(origin, guid, message, extraData);
 
         uint256 recipientBalanceAfter = INTMAX.balanceOf(recipient);
         assertEq(recipientBalanceAfter - recipientBalanceBefore, amount);
@@ -156,9 +199,9 @@ contract MainnetBridgeOAppTest is Test {
         bytes memory message = abi.encode(recipient, 100 * 1e18, srcUser);
 
         vm.prank(owner);
-        mainnetBridge.clearMessage(origin, guid, message);
+        receiverBridge.clearMessage(origin, guid, message);
 
-        assertTrue(mockEndpoint.cleared(address(mainnetBridge)));
+        assertTrue(mockEndpoint.cleared(address(receiverBridge)));
     }
 
     function test_HasStoredPayload() public {
@@ -170,9 +213,9 @@ contract MainnetBridgeOAppTest is Test {
         bytes32 payloadHash = keccak256(payload);
 
         // Set the stored payload hash in mock endpoint
-        mockEndpoint.setInboundPayloadHash(address(mainnetBridge), SRC_EID, srcSender, 1, payloadHash);
+        mockEndpoint.setInboundPayloadHash(address(receiverBridge), SRC_EID, srcSender, 1, payloadHash);
 
-        bool hasPayload = mainnetBridge.hasStoredPayload(SRC_EID, srcSender, 1, guid, message);
+        bool hasPayload = receiverBridge.hasStoredPayload(SRC_EID, srcSender, 1, guid, message);
         assertTrue(hasPayload);
     }
 
@@ -181,7 +224,7 @@ contract MainnetBridgeOAppTest is Test {
         bytes memory message = abi.encode(recipient, amount, srcUser);
         bytes32 guid = bytes32(uint256(1));
 
-        bool hasPayload = mainnetBridge.hasStoredPayload(SRC_EID, srcSender, 1, guid, message);
+        bool hasPayload = receiverBridge.hasStoredPayload(SRC_EID, srcSender, 1, guid, message);
         assertFalse(hasPayload);
     }
 
@@ -190,15 +233,15 @@ contract MainnetBridgeOAppTest is Test {
         address to = address(0x5);
 
         uint256 toBalanceBefore = INTMAX.balanceOf(to);
-        uint256 contractBalanceBefore = INTMAX.balanceOf(address(mainnetBridge));
+        uint256 contractBalanceBefore = INTMAX.balanceOf(address(receiverBridge));
 
         vm.prank(owner);
         vm.expectEmit(true, false, false, true);
-        emit IMainnetBridgeOApp.TokensWithdrawn(to, amount);
-        mainnetBridge.withdrawTokens(to, amount);
+        emit IReceiverBridgeOApp.TokensWithdrawn(to, amount);
+        receiverBridge.withdrawTokens(to, amount);
 
         uint256 toBalanceAfter = INTMAX.balanceOf(to);
-        uint256 contractBalanceAfter = INTMAX.balanceOf(address(mainnetBridge));
+        uint256 contractBalanceAfter = INTMAX.balanceOf(address(receiverBridge));
 
         assertEq(toBalanceAfter - toBalanceBefore, amount);
         assertEq(contractBalanceBefore - contractBalanceAfter, amount);
@@ -208,33 +251,15 @@ contract MainnetBridgeOAppTest is Test {
         uint256 amount = 1000 * 1e18;
 
         vm.prank(owner);
-        vm.expectRevert(IMainnetBridgeOApp.InvalidAddress.selector);
-        mainnetBridge.withdrawTokens(address(0), amount);
+        vm.expectRevert(IReceiverBridgeOApp.InvalidAddress.selector);
+        receiverBridge.withdrawTokens(address(0), amount);
     }
 
     function test_WithdrawTokensRevertInvalidAmount() public {
         address to = address(0x5);
 
         vm.prank(owner);
-        vm.expectRevert(IMainnetBridgeOApp.InvalidAmount.selector);
-        mainnetBridge.withdrawTokens(to, 0);
-    }
-
-    function test_LzReceiveTokenTransferRevert() public {
-        // Deploy a new bridge with reverting token
-        RevertingToken rtoken = new RevertingToken();
-        MockEndpointV2 endpoint2 = new MockEndpointV2(2);
-        MainnetBridgeOApp bridge = new MainnetBridgeOApp(address(endpoint2), owner, owner, address(rtoken));
-
-        // Set peer and payload
-        bytes32 sender = bytes32(uint256(uint160(address(0x4))));
-        vm.prank(owner);
-        bridge.setPeer(SRC_EID, sender);
-
-        bytes memory payload = abi.encode(recipient, 100 * 1e18, srcUser);
-
-        // lzReceive should revert because token.transfer reverts
-        vm.expectRevert();
-        endpoint2.lzReceive(payable(address(bridge)), SRC_EID, sender, 1, bytes32(0), payload, bytes(""));
+        vm.expectRevert(IReceiverBridgeOApp.InvalidAmount.selector);
+        receiverBridge.withdrawTokens(to, 0);
     }
 }

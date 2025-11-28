@@ -8,10 +8,10 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 import {MessagingFee, MessagingReceipt} from "@layerzerolabs/oapp/contracts/oapp/OApp.sol";
 import {OAppSender, OAppCore} from "@layerzerolabs/oapp/contracts/oapp/OAppSender.sol";
 import {OptionsBuilder} from "@layerzerolabs/oapp/contracts/oapp/libs/OptionsBuilder.sol";
-import {IBaseBridgeOApp} from "./interfaces/IBaseBridgeOApp.sol";
+import {ISenderBridgeOApp} from "./interfaces/ISenderBridgeOApp.sol";
 import {IBridgeStorage} from "./interfaces/IBridgeStorage.sol";
 
-contract BaseBridgeOApp is OAppSender, ReentrancyGuard, IBaseBridgeOApp {
+contract SenderBridgeOApp is OAppSender, ReentrancyGuard, ISenderBridgeOApp {
     using SafeERC20 for IERC20;
 
     IERC20 private immutable TOKEN;
