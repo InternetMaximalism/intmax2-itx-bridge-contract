@@ -1,7 +1,7 @@
 {
   "name": "intmax2-itx-bridge-contract",
   "version": "1.0.0",
-  "description": "LayerZeroを使用したBase↔Mainnet ITXトークンブリッジの実装。",
+  "description": "Implementation of Base ↔ Mainnet ITX token bridge using LayerZero.",
   "main": "index.js",
   "directories": {
     "lib": "lib",
@@ -16,6 +16,6 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "solhint": "^6.0.0"
+    "solhint": "6.0.1"
   }
 }

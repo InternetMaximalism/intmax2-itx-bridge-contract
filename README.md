@@ -1,32 +1,31 @@
 # INTMAX2 ITX Bridge Contract
 
-Implementation of Base↔Ethereum ITX token bridge using LayerZero v2.
+Implementation of ITX token bridge between various L2s (Base, Scroll) and Ethereum using LayerZero v2.
 
 ## Overview
 
-- **Base side**: Checks the balance of non-transferable INTMAX Token and sends only the difference to Ethereum side
-- **Ethereum side**: Receives messages from Base side and transfers ITX tokens to specified addresses
+- **Sender OApp side (e.g., Base, Scroll)**: Checks the balance of non-transferable INTMAX Token and sends only the difference to Ethereum side
+- **Receiver OApp side (Ethereum)**: Receives messages from Base side and transfers ITX tokens to specified addresses
 
 ## Contract Architecture
 
-### Base Side
-- `BaseBridgeOApp.sol`: Bridge contract on Base (send-only)
+### Sender OApp (e.g., Base, Scroll)- `SenderBridgeOApp.sol`: Bridge contract on Sender OApp side (send-only)
 - `BridgeStorage.sol`: External storage to record users' bridged amounts
-- Compares user's INTMAX Token balance with cumulative bridge amount and sends only the increment
+- Compares user's INTMAX Token balance with cumulative bridged amount and sends only the increment
 
-### Ethereum Side  
-- `MainnetBridgeOApp.sol`: Bridge contract on Ethereum (receive-only)
+### Receiver OApp (Ethereum)
+- `ReceiverBridgeOApp.sol`: Bridge contract on Receiver OApp side (receive-only)
 - Receives messages from Base side and distributes ITX tokens
 
 ## Main Features
 
-### Base Side Functions
+### Sender OApp Side Functions
 - `bridgeTo(address recipient)`: Bridge ITX tokens to specified address
 - `quoteBridge()`: Estimate fees required for bridging
 - `setGasLimit(uint128 _gasLimit)`: Set LayerZero execution gas limit
 - `setBridgeStorage(address _bridgeStorage)`: Set external storage
 
-### Ethereum Side Functions
+### Receiver OApp Side Functions
 - `_lzReceive()`: Receive and process messages from LayerZero
 - `manualRetry()`: Manual retry for failed messages
 - `clearMessage()`: Clear problematic messages
@@ -53,22 +52,22 @@ MAINNET_TOKEN=0xA78B3d7db31EC214a33c5C383B606DA8B87DF41F
 
 **Configuration Values:**
 - `PRIVATE_KEY`: Private key for deployment (0x prefix required)
-- `BASE_ENDPOINT`: LayerZero Endpoint for Base Sepolia
-- `BASE_TOKEN`: ITX token address on Base Sepolia  
-- `BASE_DST_EID`: Destination Endpoint ID (Ethereum Sepolia = 11155111)
-- `MAINNET_ENDPOINT`: LayerZero Endpoint for Ethereum Sepolia
-- `MAINNET_TOKEN`: ITX token address on Ethereum Sepolia
+- `BASE_ENDPOINT`: LayerZero Endpoint for Sender OApp (e.g., Base Sepolia, Scroll Sepolia)
+- `BASE_TOKEN`: ITX token address on Sender OApp (e.g., Base Sepolia, Scroll Sepolia)  
+- `BASE_DST_EID`: Destination Endpoint ID (e.g., Ethereum Sepolia = 11155111)
+- `MAINNET_ENDPOINT`: LayerZero Endpoint for Receiver OApp (Ethereum Sepolia)
+- `MAINNET_TOKEN`: ITX token address on Receiver OApp (Ethereum Sepolia)
 
-### Base Sepolia Deployment
+### Sender OApp (e.g., Base Sepolia, Scroll Sepolia) Deployment
 
 ```bash
-forge script script/DeployBaseBridge.s.sol:DeployBaseBridge --rpc-url https://sepolia.base.org --broadcast --etherscan-api-key $BASESCAN_API_KEY --verify
+forge script script/DeploySenderBridge.s.sol:DeploySenderBridge --rpc-url https://sepolia.base.org --broadcast --etherscan-api-key $BASESCAN_API_KEY --verify
 ```
 
-### Sepolia Deployment
+### Receiver OApp (Ethereum Sepolia) Deployment
 
 ```bash
-forge script script/DeployMainnetBridge.s.sol:DeployMainnetBridge --rpc-url https://sepolia.rpc.thirdweb.com --broadcast --etherscan-api-key $ETHERSCAN_API_KEY --verify
+forge script script/DeployReceiverBridge.s.sol:DeployReceiverBridge --rpc-url https://sepolia.rpc.thirdweb.com --broadcast --etherscan-api-key $ETHERSCAN_API_KEY --verify
 ```
 
 ## Setup
@@ -80,24 +79,24 @@ Execute setPeer function on each side.
 Specify the EID and OApp address of the communication partner.
 OApp address must be specified in bytes32 format.
 
-#### BaseBridgeOApp Side
+#### SenderBridgeOApp Side (e.g., Base Sepolia)
 ```bash
-# Peer setting with MainnetBridgeOApp
-cast send 0x5312f4968901Ec9d4fc43d2b0e437041614B14A2 \
+# Peer setting with ReceiverBridgeOApp
+cast send <SenderBridgeOApp_address> \
   "setPeer(uint32,bytes32)" \
-  40245 \
-  0x0000000000000000000000006B9eFE6980665B8462059D97C36674e26bc49298 \
+  <ReceiverOApp_eid> \
+  <ReceiverBridgeOApp_address_bytes32> \
   --rpc-url https://sepolia.base.org \
   --private-key $PRIVATE_KEY
 ```
 
-#### MainnetBridgeOApp Side
+#### ReceiverBridgeOApp Side (Ethereum Sepolia)
 ```bash
-# Peer setting with BaseBridgeOApp
-cast send 0x6B9eFE6980665B8462059D97C36674e26bc49298 \
+# Peer setting with SenderBridgeOApp
+cast send <ReceiverBridgeOApp_address> \
   "setPeer(uint32,bytes32)" \
-  40161 \
-  0x0000000000000000000000005312f4968901Ec9d4fc43d2b0e437041614B14A2 \
+  <SenderOApp_eid> \
+  <SenderBridgeOApp_address_bytes32> \
   --rpc-url https://sepolia.rpc.thirdweb.com \
   --private-key $PRIVATE_KEY
 ```
@@ -109,15 +108,15 @@ forge test
 ```
 
 ### Test Coverage
-- Base side: Normal bridging, error handling, gas limit setting, external storage
-- Ethereum side: Message reception, source verification, manual retry
+- Sender OApp side: Normal bridging, error handling, gas limit setting, external storage
+- Receiver OApp side: Message reception, source verification, manual retry
 
 ## Deployed Addresses
 
 ### Testnet (Sepolia Network)
-- **BaseBridgeOApp** (Base Sepolia): `0x5312f4968901Ec9d4fc43d2b0e437041614B14A2`
+- **SenderBridgeOApp** (Base Sepolia): `0x5312f4968901Ec9d4fc43d2b0e437041614B14A2`
 - **BridgeStorage** (Base Sepolia): `0x871fAee277bC6D7A695566F6f60C22CD9d8714Ef`
-- **MainnetBridgeOApp** (Ethereum Sepolia): `0x6B9eFE6980665B8462059D97C36674e26bc49298`
+- **ReceiverBridgeOApp** (Ethereum Sepolia): `0x6B9eFE6980665B8462059D97C36674e26bc49298`
 
 ## Message Monitoring
 
@@ -150,7 +149,7 @@ Check status in `data[0]["status"]["name"]` of API response:
 ### PAYLOAD_STORED (Execution Failed)
 ```bash
 # Manual retry
-cast send 0x6B9eFE6980665B8462059D97C36674e26bc49298 \
+cast send <ReceiverBridgeOApp_address> \
   "manualRetry((uint32,bytes32,uint64),bytes32,bytes,bytes)" \
   "(srcEid,sender,nonce)" \
   "guid" \
@@ -163,7 +162,7 @@ cast send 0x6B9eFE6980665B8462059D97C36674e26bc49298 \
 ### BLOCKED (Message Blocked)
 ```bash
 # Message clear (owner only)
-cast send 0x6B9eFE6980665B8462059D97C36674e26bc49298 \
+cast send <ReceiverBridgeOApp_address> \
   "clearMessage((uint32,bytes32,uint64),bytes32,bytes)" \
   "(srcEid,sender,nonce)" \
   "guid" \
@@ -210,10 +209,3 @@ forge fmt
 npm install
 npm run lint:fix
 ```
-
-## LayerZero Endpoint IDs
-
-- **Base Sepolia**: 84532
-- **Ethereum Sepolia**: 11155111
-- **Base Mainnet**: 184
-- **Ethereum Mainnet**: 30101

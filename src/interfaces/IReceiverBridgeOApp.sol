@@ -3,7 +3,7 @@ pragma solidity 0.8.30;
 
 import {Origin} from "@layerzerolabs/oapp/contracts/oapp/OAppReceiver.sol";
 
-interface IMainnetBridgeOApp {
+interface IReceiverBridgeOApp {
     /// @dev Thrown when the source endpoint ID is invalid
     error BadSrcEid();
 

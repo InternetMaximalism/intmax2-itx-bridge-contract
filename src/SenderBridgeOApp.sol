@@ -8,10 +8,10 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 import {MessagingFee, MessagingReceipt} from "@layerzerolabs/oapp/contracts/oapp/OApp.sol";
 import {OAppSender, OAppCore} from "@layerzerolabs/oapp/contracts/oapp/OAppSender.sol";
 import {OptionsBuilder} from "@layerzerolabs/oapp/contracts/oapp/libs/OptionsBuilder.sol";
-import {IBaseBridgeOApp} from "./interfaces/IBaseBridgeOApp.sol";
+import {ISenderBridgeOApp} from "./interfaces/ISenderBridgeOApp.sol";
 import {IBridgeStorage} from "./interfaces/IBridgeStorage.sol";
 
-contract BaseBridgeOApp is OAppSender, ReentrancyGuard, IBaseBridgeOApp {
+contract SenderBridgeOApp is OAppSender, ReentrancyGuard, ISenderBridgeOApp {
     using SafeERC20 for IERC20;
 
     IERC20 private immutable TOKEN;
@@ -77,7 +77,12 @@ contract BaseBridgeOApp is OAppSender, ReentrancyGuard, IBaseBridgeOApp {
         bytes memory payload = abi.encode(recipient, delta, _msgSender());
         // see https://docs.layerzero.network/v2/tools/sdks/options#evm-solidity
         bytes memory options = _getDefaultOptions();
-        MessagingFee memory fee = _quote(DST_EID, payload, options, false /* only Ethereum */ );
+        MessagingFee memory fee = _quote(
+            DST_EID,
+            payload,
+            options,
+            false /* only Ethereum */
+        );
         require(msg.value >= fee.nativeFee, InsufficientNativeFee());
         MessagingReceipt memory receipt = _lzSend(
             DST_EID,

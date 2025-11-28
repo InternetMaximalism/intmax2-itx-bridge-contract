@@ -3,7 +3,7 @@ pragma solidity 0.8.30;
 
 import {MessagingFee, MessagingReceipt} from "@layerzerolabs/oapp/contracts/oapp/OApp.sol";
 
-interface IBaseBridgeOApp {
+interface ISenderBridgeOApp {
     /// @dev Thrown when recipient address is zero
     error RecipientZero();
 
