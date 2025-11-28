@@ -5,10 +5,9 @@ import {Test} from "forge-std/Test.sol";
 import {SenderBridgeOApp} from "../src/SenderBridgeOApp.sol";
 import {ReceiverBridgeOApp} from "../src/ReceiverBridgeOApp.sol";
 import {BridgeStorage} from "../src/BridgeStorage.sol";
-import {ISenderBridgeOApp} from "../src/interfaces/ISenderBridgeOApp.sol";
 import {IReceiverBridgeOApp} from "../src/interfaces/IReceiverBridgeOApp.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {MessagingFee, MessagingReceipt} from "@layerzerolabs/oapp/contracts/oapp/OApp.sol";
+import {MessagingFee} from "@layerzerolabs/oapp/contracts/oapp/OApp.sol";
 import {Origin} from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
 import {MockEndpointV2} from "./utils/MockEndpoint.t.sol";
 

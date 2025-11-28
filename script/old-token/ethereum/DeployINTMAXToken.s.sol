@@ -4,7 +4,7 @@ pragma solidity 0.8.30;
 import {Script, console} from "forge-std/Script.sol";
 import {INTMAXToken} from "./INTMAXToken.sol";
 
-// export PRIVATE_KEY=0xyour_private_key_here 
+// export PRIVATE_KEY=0xyour_private_key_here
 // export ETHERSCAN_API_KEY=your_etherscan_api_key_here
 // forge script script/old-token/ethereum/DeployINTMAXToken.s.sol:DeployINTMAXToken --rpc-url https://sepolia.rpc.thirdweb.com --broadcast --etherscan-api-key $ETHERSCAN_API_KEY --verify
 

@@ -209,10 +209,3 @@ forge fmt
 npm install
 npm run lint:fix
 ```
-
-## LayerZero Endpoint IDs
-
-- **Base Sepolia**: 84532
-- **Ethereum Sepolia**: 11155111
-- **Base Mainnet**: 184
-- **Ethereum Mainnet**: 30101

@@ -8,7 +8,6 @@ import {ISenderBridgeOApp} from "../src/interfaces/ISenderBridgeOApp.sol";
 import {IBridgeStorage} from "../src/interfaces/IBridgeStorage.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {MessagingFee, MessagingReceipt} from "@layerzerolabs/oapp/contracts/oapp/OApp.sol";
-import {Origin} from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
 import {MockEndpointV2} from "./utils/MockEndpoint.t.sol";
 
 contract MockINTMAXToken is IERC20 {

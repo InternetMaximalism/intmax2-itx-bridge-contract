@@ -5,7 +5,7 @@ import {Script, console} from "forge-std/Script.sol";
 import {ScrollINTMAXToken} from "./ScrollINTMAXToken.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-// export PRIVATE_KEY=0xyour_private_key_here 
+// export PRIVATE_KEY=0xyour_private_key_here
 // export SCROLLSCAN_API_KEY=your_scrollscan_api_key_here
 // forge script script/old-token/scroll/DeployScrollINTMAXToken.s.sol:DeployScrollINTMAXToken --rpc-url https://sepolia-rpc.scroll.io --broadcast --etherscan-api-key $SCROLLSCAN_API_KEY --verify
 contract DeployScrollINTMAXToken is Script {
@@ -29,10 +29,8 @@ contract DeployScrollINTMAXToken is Script {
         console.log("ScrollINTMAXToken Implementation deployed to: %s", address(implementation));
 
         // 2. Encode the initializer call
-        bytes memory initializerData = abi.encodeCall(
-            ScrollINTMAXToken.initialize,
-            (adminAddress, rewardContractAddress, mintAmount)
-        );
+        bytes memory initializerData =
+            abi.encodeCall(ScrollINTMAXToken.initialize, (adminAddress, rewardContractAddress, mintAmount));
 
         // 3. Deploy the ERC1967Proxy, pointing to the implementation and initializing it
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initializerData);

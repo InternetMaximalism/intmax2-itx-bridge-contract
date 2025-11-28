@@ -4,8 +4,7 @@ pragma solidity 0.8.30;
 import {Script, console} from "forge-std/Script.sol";
 import {INTMAXTokenLV2} from "./INTMAXTokenLV2.sol";
 
-
-// export PRIVATE_KEY=0xyour_private_key_here 
+// export PRIVATE_KEY=0xyour_private_key_here
 // export BASESCAN_API_KEY=your_basescan_api_key_here
 // forge script script/old-token/base/DeployINTMAXTokenLV2.s.sol:DeployINTMAXTokenLV2 --rpc-url https://sepolia.base.org --broadcast --etherscan-api-key $BASESCAN_API_KEY --verify
 
