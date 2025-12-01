@@ -8,8 +8,8 @@ import {ReceiverBridgeOApp} from "../src/ReceiverBridgeOApp.sol";
 contract DeployReceiverBridge is Script {
     function run() external {
         // Load configuration from environment variables
-        address endpoint = vm.envAddress("MAINNET_ENDPOINT");
-        address token = vm.envAddress("MAINNET_TOKEN");
+        address endpoint = vm.envAddress("L1_ENDPOINT");
+        address token = vm.envAddress("L1_TOKEN");
 
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(deployerPrivateKey);

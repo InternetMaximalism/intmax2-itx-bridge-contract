@@ -1,193 +1,113 @@
 # INTMAX2 ITX Bridge Contract
 
-Implementation of ITX token bridge between various L2s (Base, Scroll) and Ethereum using LayerZero v2.
+Implementation of ITX token bridge between L2s (Base, Scroll) and Ethereum using LayerZero v2.
 
 ## Overview
 
-- **Sender OApp side (e.g., Base, Scroll)**: Checks the balance of non-transferable INTMAX Token and sends only the difference to Ethereum side
-- **Receiver OApp side (Ethereum)**: Receives messages from Base side and transfers ITX tokens to specified addresses
+- **Sender OApp side (Base, Scroll)**: Checks the balance of non-transferable INTMAX Token and sends only the difference to Ethereum side.
+- **Receiver OApp side (Ethereum)**: Receives messages from L2 side and transfers ITX tokens to specified addresses.
 
-## Contract Architecture
-
-### Sender OApp (e.g., Base, Scroll)- `SenderBridgeOApp.sol`: Bridge contract on Sender OApp side (send-only)
-- `BridgeStorage.sol`: External storage to record users' bridged amounts
-- Compares user's INTMAX Token balance with cumulative bridged amount and sends only the increment
-
-### Receiver OApp (Ethereum)
-- `ReceiverBridgeOApp.sol`: Bridge contract on Receiver OApp side (receive-only)
-- Receives messages from Base side and distributes ITX tokens
-
-## Main Features
-
-### Sender OApp Side Functions
-- `bridgeTo(address recipient)`: Bridge ITX tokens to specified address
-- `quoteBridge()`: Estimate fees required for bridging
-- `setGasLimit(uint128 _gasLimit)`: Set LayerZero execution gas limit
-- `setBridgeStorage(address _bridgeStorage)`: Set external storage
-
-### Receiver OApp Side Functions
-- `_lzReceive()`: Receive and process messages from LayerZero
-- `manualRetry()`: Manual retry for failed messages
-- `clearMessage()`: Clear problematic messages
-
-## Deployment
-
-### Environment Variables Setup
-
-Copy `.env.example` to create `.env` file and configure the following settings:
-
+## Setup Guide
+### 1. deploy ReceiverBridgeOApp on Ethereum
 ```bash
-# deploy
-PRIVATE_KEY=0xyour_private_key_here
-
-## base
-BASE_ENDPOINT=0x6EDCE65403992e310A62460808c4b910D972f10f
-BASE_TOKEN=0xC79BB8DB83950b9c5AE5dF2E56bb502968EE6dB5
-BASE_DST_EID=11155111
-
-## mainnet
-MAINNET_ENDPOINT=0x6EDCE65403992e310A62460808c4b910D972f10f
-MAINNET_TOKEN=0xA78B3d7db31EC214a33c5C383B606DA8B87DF41F
+# set L1_ENDPOINT and L1_TOKEN and PRIVATE_KEY to .env file
+# L1_ENDPOINT:Ethereum LayerZero Endpoint address
+#             https://docs.layerzero.network/v2/deployments/chains/ethereum
+# L1_TOKEN:Ethereum old ITX token address
+# PRIVATE_KEY:deployer private key
+forge script script/DeployReceiverBridge.s.sol:DeployReceiverBridge --rpc-url <ETH_RPC>
+  --broadcast --etherscan-api-key <ETHERSCAN_API_KEY> --verify
 ```
 
-**Configuration Values:**
-- `PRIVATE_KEY`: Private key for deployment (0x prefix required)
-- `BASE_ENDPOINT`: LayerZero Endpoint for Sender OApp (e.g., Base Sepolia, Scroll Sepolia)
-- `BASE_TOKEN`: ITX token address on Sender OApp (e.g., Base Sepolia, Scroll Sepolia)  
-- `BASE_DST_EID`: Destination Endpoint ID (e.g., Ethereum Sepolia = 11155111)
-- `MAINNET_ENDPOINT`: LayerZero Endpoint for Receiver OApp (Ethereum Sepolia)
-- `MAINNET_TOKEN`: ITX token address on Receiver OApp (Ethereum Sepolia)
-
-### Sender OApp (e.g., Base Sepolia, Scroll Sepolia) Deployment
-
+### 2. deploy SenderBridgeOApp on L2 (Base, Scroll)
 ```bash
-forge script script/DeploySenderBridge.s.sol:DeploySenderBridge --rpc-url https://sepolia.base.org --broadcast --etherscan-api-key $BASESCAN_API_KEY --verify
+# set L2_ENDPOINT and L2_TOKEN and L2_DST_EID and PRIVATE_KEY to .env file
+# L2_ENDPOINT:Base or Scroll LayerZero Endpoint address
+#             https://docs.layerzero.network/v2/deployments/chains/base
+#             https://docs.layerzero.network/v2/deployments/chains/scroll
+# L2_TOKEN:L2 old ITX token address
+# L2_DST_EID:Ethereum EID
+#             https://docs.layerzero.network/v2/deployments/chains/ethereum
+# PRIVATE_KEY:deployer private key
+# For Base
+forge script script/DeploySenderBridge.s.sol:DeploySenderBridge --rpc-url <BASE_RPC>
+  --broadcast --etherscan-api-key <ETHERSCAN_API_KEY> --verify
+# For Scroll
+forge script script/DeploySenderBridge.s.sol:DeploySenderBridge --rpc-url <SCROLL_RPC>
+  --broadcast --etherscan-api-key <ETHERSCAN_API_KEY> --verify
 ```
 
-### Receiver OApp (Ethereum Sepolia) Deployment
+### 3. Peer Configuration (Bidirectional)
 
+Connect L2 Sender and L1 Receiver by setting peers on both sides.
+
+#### Sender (Base/Scroll) -> Receiver (Ethereum)
 ```bash
-forge script script/DeployReceiverBridge.s.sol:DeployReceiverBridge --rpc-url https://sepolia.rpc.thirdweb.com --broadcast --etherscan-api-key $ETHERSCAN_API_KEY --verify
+cast send <SENDER_OAPP_ADDRESS> "setPeer(uint32,bytes32)" <ETHEREUM_EID> <RECEIVER_ADDRESS_BYTES32> --rpc-url <L2_RPC> --private-key $PRIVATE_KEY
 ```
 
-## Setup
-
-### 1. Peer Configuration
-
-Bidirectional peer connections must be configured:
-Execute setPeer function on each side.
-Specify the EID and OApp address of the communication partner.
-OApp address must be specified in bytes32 format.
-
-#### SenderBridgeOApp Side (e.g., Base Sepolia)
+#### Receiver (Ethereum) -> Sender (Base/Scroll)
 ```bash
-# Peer setting with ReceiverBridgeOApp
-cast send <SenderBridgeOApp_address> \
-  "setPeer(uint32,bytes32)" \
-  <ReceiverOApp_eid> \
-  <ReceiverBridgeOApp_address_bytes32> \
-  --rpc-url https://sepolia.base.org \
-  --private-key $PRIVATE_KEY
+# For Base
+cast send <RECEIVER_OAPP_ADDRESS> "setPeer(uint32,bytes32)" <BASE_EID> <BASE_SENDER_ADDRESS_BYTES32> --rpc-url <ETH_RPC> --private-key $PRIVATE_KEY
+
+# For Scroll (EID: 30214)
+cast send <RECEIVER_OAPP_ADDRESS> "setPeer(uint32,bytes32)" <SCROLL_EID> <SCROLL_SENDER_ADDRESS_BYTES32> --rpc-url <ETH_RPC> --private-key $PRIVATE_KEY
 ```
 
-#### ReceiverBridgeOApp Side (Ethereum Sepolia)
-```bash
-# Peer setting with SenderBridgeOApp
-cast send <ReceiverBridgeOApp_address> \
-  "setPeer(uint32,bytes32)" \
-  <SenderOApp_eid> \
-  <SenderBridgeOApp_address_bytes32> \
-  --rpc-url https://sepolia.rpc.thirdweb.com \
-  --private-key $PRIVATE_KEY
-```
+### 4. DVN Configuration (Sender Side)
 
-## Testing
+**Critical for Mainnet:** At only mainnet, you must explicitly configure the DVN (Decentralized Verifier Network) on the Sender OApp. Default configurations may not work.
+
+Use the provided script `script/ConfigureOApp.s.sol` to set up the DVN (e.g., LayerZero/Polyhedra DVN).
 
 ```bash
-forge test
+# set L2_SENDER_OAPP and L2_DVN_ADDRESS and PRIVATE_KEY to .env file
+# L2_SENDER_OAPP:Deployed SenderBridgeOApp address on L2
+# L2_DVN_ADDRESS:DVN address for the target chain
+#                https://docs.layerzero.network/v2/deployments/dvn-addresses
+# PRIVATE_KEY:deployer private key
+# Example for Base
+export BASE_RPC=https://mainnet.base.org
+forge script script/ConfigureOApp.s.sol:ConfigureBaseOApp --rpc-url $BASE_RPC --private-key $PRIVATE_KEY --broadcast
+# Example for Scroll
+export SCROLL_RPC=https://mainnet.scroll.io
+forge script script/ConfigureOApp.s.sol:ConfigureScrollOApp --rpc-url $SCROLL_RPC --private-key $PRIVATE_KEY --broadcast
 ```
 
-### Test Coverage
-- Sender OApp side: Normal bridging, error handling, gas limit setting, external storage
-- Receiver OApp side: Message reception, source verification, manual retry
+*Note: Ensure the script is updated with the correct DVN address and EID for the target chain.*
 
-## Deployed Addresses
 
-### Testnet (Sepolia Network)
-- **SenderBridgeOApp** (Base Sepolia): `0x5312f4968901Ec9d4fc43d2b0e437041614B14A2`
-- **BridgeStorage** (Base Sepolia): `0x871fAee277bC6D7A695566F6f60C22CD9d8714Ef`
-- **ReceiverBridgeOApp** (Ethereum Sepolia): `0x6B9eFE6980665B8462059D97C36674e26bc49298`
+### 5. Receiver OApp Configuration (Ethereum)
 
-## Message Monitoring
+The Receiver contract must hold ITX tokens and have the `MINTER_ROLE` to transfer them (due to ITX token logic).
 
-### Status Monitoring
+1.  **Grant MINTER_ROLE**: Admin grants `MINTER_ROLE` to ReceiverBridgeOApp.
+    ```bash
+    cast send <ITX_TOKEN_ADDRESS> "grantRole(bytes32,address)" <MINTER_ROLE_HASH> <RECEIVER_OAPP_ADDRESS> --rpc-url <ETH_RPC> --private-key $PRIVATE_KEY
+    ```
+2.  **Fund Receiver**: Transfer ITX tokens to the ReceiverBridgeOApp address.
+    ```bash
+    cast send <ITX_TOKEN_ADDRESS> "transfer(address,uint256)" <RECEIVER_OAPP_ADDRESS> <AMOUNT> --rpc-url <ETH_RPC> --private-key $PRIVATE_KEY
+    ```
 
-Get GUID from `BridgeRequested` event when executing `bridgeTo`, and monitor via LayerZero Scan API:
+## Usage
 
-```bash
-# Testnet
-GET https://scan-testnet.layerzero-api.com/v1/messages/guid/{guid}
+### Bridging Tokens
 
-# Mainnet  
-GET https://scan.layerzero-api.com/v1/messages/guid/{guid}
-```
+To bridge tokens from L2 to Ethereum:
 
-Check status in `data[0]["status"]["name"]` of API response:
+1.  **Quote Fee**: Estimate the native fee (ETH) required for the bridge.
+    ```bash
+    cast call <SENDER_OAPP_ADDRESS> "quoteBridge()(uint256 nativeFee, uint256 zroFee)" --from <USER_ADDRESS> --rpc-url <L2_RPC>
+    ```
 
-### Message Status Types
-- `INFLIGHT`: Sending
-- `DELIVERED`: Delivery complete (normal completion)
-- `PAYLOAD_STORED`: Execution failed, retry required
-- `BLOCKED`: Previous message is stuck
-- `FAILED`: Send failed
+2.  **Execute Bridge**: Call `bridgeTo` with the estimated fee.
+    ```bash
+    cast send <SENDER_OAPP_ADDRESS> "bridgeTo(address)" <RECIPIENT_ADDRESS> --value <NATIVE_FEE> --rpc-url <L2_RPC> --private-key <USER_PRIVATE_KEY>
+    ```
 
-### Normal Flow
-`INFLIGHT` → `DELIVERED`
-
-## Emergency Response
-
-### PAYLOAD_STORED (Execution Failed)
-```bash
-# Manual retry
-cast send <ReceiverBridgeOApp_address> \
-  "manualRetry((uint32,bytes32,uint64),bytes32,bytes,bytes)" \
-  "(srcEid,sender,nonce)" \
-  "guid" \
-  "message" \
-  "extraData" \
-  --rpc-url https://sepolia.rpc.thirdweb.com \
-  --private-key $PRIVATE_KEY
-```
-
-### BLOCKED (Message Blocked)
-```bash
-# Message clear (owner only)
-cast send <ReceiverBridgeOApp_address> \
-  "clearMessage((uint32,bytes32,uint64),bytes32,bytes)" \
-  "(srcEid,sender,nonce)" \
-  "guid" \
-  "message" \
-  --rpc-url https://sepolia.rpc.thirdweb.com \
-  --private-key $PRIVATE_KEY
-```
-
-## Security Features
-
-- Strict source verification (srcEid + sender address)
-- Prevention of excessive sending through balance checks  
-- Prevention of sending to zero address
-- Access control (owner-only functions)
-- Reentrancy attack protection
-- Upgrade compatibility through external storage pattern
-
-## Technical Specifications
-
-- **Solidity**: 0.8.30
-- **LayerZero**: v2
-- **OpenZeppelin**: Ownable, SafeERC20, ReentrancyGuard
-- **Default Gas Limit**: 200,000 (configurable)
-
-## Development Commands
+## Development
 
 ### Build
 ```bash

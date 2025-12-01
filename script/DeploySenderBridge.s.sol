@@ -5,7 +5,7 @@ import {Script, console} from "forge-std/Script.sol";
 import {SenderBridgeOApp} from "../src/SenderBridgeOApp.sol";
 import {BridgeStorage} from "../src/BridgeStorage.sol";
 
-// forge script script/DeploySenderBridge.s.sol:DeploySenderBridge --rpc-url https://sepolia.base.org --broadcast
+// forge script script/DeploySenderBridge.s.sol:DeploySenderBridge --rpc-url https://base.meowrpc.com --broadcast --etherscan-api-key ${API KEY} --verify
 contract DeploySenderBridge is Script {
     function run() external {
         // Load configuration from environment variables
