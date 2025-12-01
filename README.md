@@ -61,6 +61,98 @@ cast send <RECEIVER_OAPP_ADDRESS> "setPeer(uint32,bytes32)" <SCROLL_EID> <SCROLL
 
 Use the provided script `script/ConfigureOApp.s.sol` to set up the DVN (e.g., LayerZero/Polyhedra DVN).
 
+```
+Detailed explanation of each field in the UlnConfig (Ultra Light Node Config) struct for LayerZero v2
+
+struct UlnConfig {
+    uint64 confirmations;
+    uint8 requiredDVNCount;
+    uint8 optionalDVNCount;
+    uint8 optionalDVNThreshold;
+    address[] requiredDVNs;
+    address[] optionalDVNs;
+}
+
+1. confirmations (uint64)
+
+Specifies the number of block confirmations to wait on the source chain.
+	•	Meaning:
+After a transaction is processed on the source chain, this defines how many additional blocks must be mined before the message is eligible for verification.
+	•	Purpose:
+This is a protection against chain reorganizations (reorgs).
+If a reorg occurs and the transaction disappears, waiting for confirmations ensures that the system does not verify a message that may later be invalidated.
+	•	Typical values:
+Common values are 15 or 20.
+For finality chains like Ethereum, this is often set to a depth considered safe.
+Setting it to 0 allows immediate verification but increases reorg risk.
+
+⸻
+
+2. requiredDVNCount (uint8)
+
+Specifies the number of required DVNs.
+	•	Meaning:
+Among the DVNs listed in requiredDVNs, this value defines how many must sign the message.
+In most cases it should be equal to the full length of the list.
+	•	Constraint:
+Must match requiredDVNs.length.
+	•	Role:
+A message is considered verifiable only if all required DVNs (based on this count) approve it.
+
+⸻
+
+3. optionalDVNCount (uint8)
+
+Specifies the total number of optional DVNs.
+	•	Meaning:
+This value indicates how many DVNs are listed in optionalDVNs.
+	•	Constraint:
+Must match optionalDVNs.length.
+
+⸻
+
+4. optionalDVNThreshold (uint8)
+
+Specifies the minimum number of optional DVNs that must sign.
+	•	Meaning:
+From the optionalDVNs list, at least this many DVNs must sign for the message to be accepted.
+	•	Examples:
+If optionalDVNCount = 3 and optionalDVNThreshold = 1,
+then any 1 of the 3 optional DVNs can sign to fulfill the requirement.
+	•	Role:
+This improves availability and decentralization.
+Even if one DVN goes down, others can still satisfy the threshold.
+
+⸻
+
+5. requiredDVNs (address[])
+
+A list of mandatory DVNs whose signatures are always required.
+	•	Meaning:
+Every DVN in this list must sign the message (as dictated by requiredDVNCount).
+	•	Importance:
+All these DVNs must participate; otherwise, verification cannot complete.
+	•	Typical usage:
+Often configured with one highly trusted DVN such as:
+[LayerZero_Labs_DVN]
+
+⸻
+
+6. optionalDVNs (address[])
+
+A list of optional DVNs that may sign the message.
+	•	Meaning:
+DVNs in this list contribute signatures only as needed to satisfy the optionalDVNThreshold.
+	•	Role:
+Enables flexible configurations—adding redundancy or decentralizing trust.
+	•	Example:
+You can register multiple optional DVNs such as:
+	•	Google Cloud DVN
+	•	Polyhedra DVN
+And require signatures from only 1 or 2 of them.
+
+```
+
 ```bash
 # set L2_SENDER_OAPP and L2_DVN_ADDRESS and PRIVATE_KEY to .env file
 # L2_SENDER_OAPP:Deployed SenderBridgeOApp address on L2
