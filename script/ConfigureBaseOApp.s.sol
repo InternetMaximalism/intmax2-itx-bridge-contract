@@ -10,15 +10,14 @@ import {
 } from "lib/LayerZero-v2/packages/layerzero-v2/evm/protocol/contracts/interfaces/IMessageLibManager.sol";
 import {UlnConfig} from "lib/LayerZero-v2/packages/layerzero-v2/evm/messagelib/contracts/uln/UlnBase.sol"; // UlnConfigを直接インポート
 
-contract ConfigureL2OApp is Script {
-    // Base and Scroll Endpoint
+contract ConfigureBaseOApp is Script {
     address private constant ENDPOINT = 0x1a44076050125825900e736c501f859c50fE728c;
+    address private constant GOOGLE_DVN = 0xD56e4eAb23cb81f43168F9F45211Eb027b9aC7cc;
     uint32 internal constant ETH_EID = 30101;
     uint32 internal constant CONFIG_TYPE_ULN = 2; // Defined in SendUln302.sol
 
     function run() external {
-        address senderOappAddress = vm.envAddress("L2_SENDER_OAPP");
-        address dvnAddress = vm.envAddress("L2_DVN_ADDRESS");
+        address senderOappAddress = vm.envAddress("BASE_SENDER_OAPP");
 
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
@@ -28,7 +27,7 @@ contract ConfigureL2OApp is Script {
 
         // Prepare DVN configuration (UlnConfig)
         address[] memory requiredDVNs = new address[](1);
-        requiredDVNs[0] = dvnAddress;
+        requiredDVNs[0] = GOOGLE_DVN;
 
         address[] memory optionalDVNs = new address[](0);
 

@@ -154,17 +154,17 @@ And require signatures from only 1 or 2 of them.
 ```
 
 ```bash
-# set L2_SENDER_OAPP and L2_DVN_ADDRESS and PRIVATE_KEY to .env file
-# L2_SENDER_OAPP:Deployed SenderBridgeOApp address on L2
-# L2_DVN_ADDRESS:DVN address for the target chain
-#                https://docs.layerzero.network/v2/deployments/dvn-addresses
+# set SENDER_OAPP and PRIVATE_KEY to .env file
+# BASE_SENDER_OAPP:Deployed SenderBridgeOApp address on L2
 # PRIVATE_KEY:deployer private key
 # Example for Base
 export BASE_RPC=https://mainnet.base.org
-forge script script/ConfigureOApp.s.sol:ConfigureBaseOApp --rpc-url $BASE_RPC --private-key $PRIVATE_KEY --broadcast
+forge script script/ConfigureBaseOApp.s.sol:ConfigureBaseOApp --rpc-url $BASE_RPC --private-key $PRIVATE_KEY --broadcast
 # Example for Scroll
+# SCROLL_SENDER_OAPP:Deployed SenderBridgeOApp address on Scroll
+# PRIVATE_KEY:deployer private key
 export SCROLL_RPC=https://mainnet.scroll.io
-forge script script/ConfigureOApp.s.sol:ConfigureScrollOApp --rpc-url $SCROLL_RPC --private-key $PRIVATE_KEY --broadcast
+forge script script/ConfigureScrollOApp.s.sol:ConfigureScrollOApp --rpc-url $SCROLL_RPC --broadcast
 ```
 
 *Note: Ensure the script is updated with the correct DVN address and EID for the target chain.*
