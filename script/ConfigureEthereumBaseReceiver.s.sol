@@ -14,7 +14,7 @@ contract ConfigureEthereumBaseReceiver is Script {
     address internal constant ETH_ENDPOINT = 0x1a44076050125825900e736c501f859c50fE728c;
     address internal constant RECEIVE_LIB = 0xc02Ab410f0734EFa3F14628780e6e695156024C2;
 
-    address internal constant GOOGLE_DVN_ETH = 0xD56e4eAb23cb81f43168F9F45211Eb027b9aC7cc;
+    address internal constant LZ_LABS_DVN_ETH = 0x589dEDbD617e0CBcB916A9223F4d1300c294236b;
 
     uint32 internal constant BASE_EID = 30184;
     uint32 internal constant CONFIG_TYPE_ULN = 2;
@@ -26,7 +26,7 @@ contract ConfigureEthereumBaseReceiver is Script {
 
         // Required DVNs: LZ Labs DVN only
         address[] memory requiredDVNs = new address[](1);
-        requiredDVNs[0] = GOOGLE_DVN_ETH;
+        requiredDVNs[0] = LZ_LABS_DVN_ETH;
 
         address[] memory optionalDVNs = new address[](0);
 

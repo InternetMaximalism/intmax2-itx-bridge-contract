@@ -12,7 +12,7 @@ import {UlnConfig} from "lib/LayerZero-v2/packages/layerzero-v2/evm/messagelib/c
 
 contract ConfigureBaseOApp is Script {
     address private constant ENDPOINT = 0x1a44076050125825900e736c501f859c50fE728c;
-    address private constant GOOGLE_DVN = 0xD56e4eAb23cb81f43168F9F45211Eb027b9aC7cc;
+    address private constant LZ_LABS_DVN = 0x9e059a54699a285714207b43B055483E78FAac25;
     uint32 internal constant ETH_EID = 30101;
     uint32 internal constant CONFIG_TYPE_ULN = 2; // Defined in SendUln302.sol
 
@@ -27,7 +27,7 @@ contract ConfigureBaseOApp is Script {
 
         // Prepare DVN configuration (UlnConfig)
         address[] memory requiredDVNs = new address[](1);
-        requiredDVNs[0] = GOOGLE_DVN;
+        requiredDVNs[0] = LZ_LABS_DVN;
 
         address[] memory optionalDVNs = new address[](0);
 
