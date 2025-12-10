@@ -3,6 +3,7 @@ pragma solidity 0.8.30;
 
 import {Script, console} from "forge-std/Script.sol";
 import {SenderBridgeOApp} from "../src/SenderBridgeOApp.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 // forge script script/DeploySenderBridge.s.sol:DeploySenderBridge --rpc-url https://base.meowrpc.com --broadcast --etherscan-api-key ${API KEY} --verify
 contract DeploySenderBridge is Script {
@@ -25,18 +26,25 @@ contract DeploySenderBridge is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        // Deploy SenderBridgeOApp
-        SenderBridgeOApp senderBridge = new SenderBridgeOApp(
-            endpoint, // endpoint
-            deployer, // delegate
-            deployer, // owner
-            token, // token
-            dstEid // destination EID
+        // 1. Deploy Implementation
+        // Constructor: (address _endpoint, address _token, uint32 _dstEid)
+        SenderBridgeOApp implementation = new SenderBridgeOApp(endpoint, token, dstEid);
+        console.log("Sender Bridge Implementation deployed to:", address(implementation));
+
+        // 2. Prepare initialization data
+        // initialize(address _delegate, address _owner)
+        bytes memory initData = abi.encodeCall(
+            SenderBridgeOApp.initialize,
+            (deployer, deployer) // _delegate, _owner を deployer に設定
         );
-        console.log("Sender Bridge deployed to:", address(senderBridge));
+
+        // 3. Deploy Proxy
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
+        console.log("Sender Bridge Proxy deployed to:", address(proxy));
 
         console.log("=== Deployment Summary ===");
-        console.log("SenderBridgeOApp:", address(senderBridge));
+        console.log("Proxy Address (Use this):", address(proxy));
+        console.log("Implementation Address:", address(implementation));
         console.log("=========================");
 
         vm.stopBroadcast();

@@ -3,32 +3,52 @@ pragma solidity 0.8.30;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {MessagingFee, MessagingReceipt} from "@layerzerolabs/oapp/contracts/oapp/OApp.sol";
-import {OAppSender, OAppCore} from "@layerzerolabs/oapp/contracts/oapp/OAppSender.sol";
+import {OwnableUpgradeable} from "@openzeppelin-upgradeable/access/OwnableUpgradeable.sol"; 
+import {ReentrancyGuardUpgradeable} from "@openzeppelin-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import {MessagingFee, MessagingReceipt} from "@layerzerolabs/oapp-evm-upgradeable/contracts/oapp/OAppUpgradeable.sol";
+import {OAppSenderUpgradeable, OAppCoreUpgradeable} from "@layerzerolabs/oapp-evm-upgradeable/contracts/oapp/OAppSenderUpgradeable.sol";
 import {OptionsBuilder} from "@layerzerolabs/oapp/contracts/oapp/libs/OptionsBuilder.sol";
+import {Initializable} from "@openzeppelin-upgradeable/proxy/utils/Initializable.sol";
+import {UUPSUpgradeable} from "@openzeppelin-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ISenderBridgeOApp} from "./interfaces/ISenderBridgeOApp.sol";
 
-contract SenderBridgeOApp is OAppSender, ReentrancyGuard, ISenderBridgeOApp {
+// Removed explicit OwnableUpgradeable inheritance as it is inherited via OAppSenderUpgradeable -> OAppCoreUpgradeable
+contract SenderBridgeOApp is Initializable, OAppSenderUpgradeable, ReentrancyGuardUpgradeable, UUPSUpgradeable, ISenderBridgeOApp {
     using SafeERC20 for IERC20;
 
-    IERC20 private immutable TOKEN;
-    uint32 private immutable DST_EID;
+    IERC20 public immutable TOKEN;
+    uint32 public immutable DST_EID;
     
     /// @dev Mapping of user addresses to their total bridged amounts
-    mapping(address => uint256) private _bridgedAmount;
-    
-    uint128 public gasLimit = 200000;
+    mapping(address => uint256) public bridgedAmount;
+    uint128 public gasLimit;
 
-    constructor(address _endpoint, address _delegate, address _owner, address _token, uint32 _dstEid)
-        OAppCore(_endpoint, _delegate)
-        Ownable(_owner)
-    {
+    /**
+     * @dev Gap for future upgrades to add storage variables without shifting down storage
+     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     */
+    uint256[46] private __gap;
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor(address _endpoint, address _token, uint32 _dstEid) OAppCoreUpgradeable(_endpoint) {
         TOKEN = IERC20(_token);
-        // https://docs.layerzero.network/v2/concepts/glossary#endpoint-id
         DST_EID = _dstEid;
+        _disableInitializers();
     }
+
+    function initialize(
+        address _delegate,
+        address _owner
+    ) public initializer {
+        __OAppSender_init(_delegate);
+        __Ownable_init(_owner);
+        __ReentrancyGuard_init();
+        __UUPSUpgradeable_init();
+        
+        gasLimit = 200000;
+    }
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     /**
      * @notice Set the gas limit for LayerZero message execution on the destination chain
@@ -40,10 +60,6 @@ contract SenderBridgeOApp is OAppSender, ReentrancyGuard, ISenderBridgeOApp {
         uint128 oldLimit = gasLimit;
         gasLimit = _gasLimit;
         emit GasLimitUpdated(oldLimit, _gasLimit);
-    }
-
-    function bridgedAmount(address user) external view returns (uint256) {
-        return _bridgedAmount[user];
     }
 
     /**
@@ -65,7 +81,7 @@ contract SenderBridgeOApp is OAppSender, ReentrancyGuard, ISenderBridgeOApp {
         (uint256 current, uint256 delta) = _getCurrentAndDelta();
         
         // Update local state directly
-        _bridgedAmount[_msgSender()] = current;
+        bridgedAmount[_msgSender()] = current;
         emit BridgedAmountUpdated(_msgSender(), current);
 
         bytes memory payload = abi.encode(recipient, delta, _msgSender());
@@ -90,7 +106,7 @@ contract SenderBridgeOApp is OAppSender, ReentrancyGuard, ISenderBridgeOApp {
 
     function _getCurrentAndDelta() private view returns (uint256 current, uint256 delta) {
         current = TOKEN.balanceOf(_msgSender());
-        uint256 prev = _bridgedAmount[_msgSender()];
+        uint256 prev = bridgedAmount[_msgSender()];
         require(current > prev, BalanceLessThanBridged());
         delta = current - prev;
         require(delta > 0, NoDelta());

@@ -2,11 +2,13 @@
 pragma solidity 0.8.30;
 
 import {Test} from "forge-std/Test.sol";
+import {console} from "forge-std/console.sol"; // Add console import
 import {SenderBridgeOApp} from "../src/SenderBridgeOApp.sol";
 import {ISenderBridgeOApp} from "../src/interfaces/ISenderBridgeOApp.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {MessagingFee, MessagingReceipt} from "@layerzerolabs/oapp/contracts/oapp/OApp.sol";
 import {MockEndpointV2} from "./utils/MockEndpoint.t.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract MockINTMAXToken is IERC20 {
     mapping(address => uint256) private _balances;
@@ -53,19 +55,33 @@ contract SenderBridgeOAppTest is Test {
         INTMAX = new MockINTMAXToken();
         endpoint = new MockEndpointV2(1); // Base chain EID
 
-        // Deploy SenderBridgeOApp
-        senderBridge = new SenderBridgeOApp(
-            address(endpoint), // mock endpoint
-            owner, // delegate
-            owner, // owner
-            address(INTMAX), // token
+        // Deploy Implementation
+        SenderBridgeOApp implementation = new SenderBridgeOApp(
+            address(endpoint),
+            address(INTMAX), // TOKEN
             DST_EID
         );
 
+        // Deploy Proxy without calling initialize in constructor
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), ""); // Empty data
+        
+        // Cast proxy to SenderBridgeOApp interface
+        senderBridge = SenderBridgeOApp(address(proxy));
+
+        // Manually initialize the proxy as the owner
+        vm.prank(address(proxy)); // Set msg.sender to proxy address for initialization
+        senderBridge.initialize(owner, owner); // Pass delegate and owner
+
+        // console.log("SenderBridgeOApp owner after initialize:", senderBridge.owner());
+        // console.log("Test owner:", owner);
+        // Verify owner is set correctly
+        assertEq(senderBridge.owner(), owner, "SenderBridgeOApp owner should be set to test owner");
+
         // Set peer so OAppCore._getPeerOrRevert won't revert during tests
         bytes32 peer = bytes32(uint256(uint160(owner)));
-        vm.prank(owner);
-        senderBridge.setPeer(DST_EID, peer);
+        uint32 dstEid = senderBridge.DST_EID();
+        vm.prank(senderBridge.owner()); // Add vm.prank again for setPeer, using reported owner
+        senderBridge.setPeer(dstEid, peer); 
 
         INTMAX.setBalance(user, 1000 * 1e18);
         vm.deal(user, 10 ether);
