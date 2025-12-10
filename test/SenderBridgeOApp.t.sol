@@ -314,6 +314,31 @@ contract SenderBridgeOAppTest is Test {
         assertGt(fee.nativeFee, 0);
         assertEq(fee.lzTokenFee, 0);
     }
+
+    function test_UpgradeTo() public {
+        // Deploy V2 implementation
+        SenderBridgeOAppV2 v2Impl = new SenderBridgeOAppV2(address(endpoint), address(INTMAX), DST_EID);
+
+        // Upgrade to V2
+        vm.prank(owner);
+        senderBridge.upgradeToAndCall(address(v2Impl), "");
+
+        // Verify new functionality
+        SenderBridgeOAppV2 v2 = SenderBridgeOAppV2(address(senderBridge));
+        assertEq(v2.version(), "v2");
+
+        // Verify state preservation
+        assertEq(v2.gasLimit(), 200000); // Default value from setUp
+        assertEq(v2.owner(), owner);
+    }
+}
+
+contract SenderBridgeOAppV2 is SenderBridgeOApp {
+    constructor(address _endpoint, address _token, uint32 _dstEid) SenderBridgeOApp(_endpoint, _token, _dstEid) {}
+
+    function version() external pure returns (string memory) {
+        return "v2";
+    }
 }
 
 contract ReentrancyAttacker {

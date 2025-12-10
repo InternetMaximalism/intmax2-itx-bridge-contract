@@ -184,3 +184,13 @@ forge fmt
 npm i
 npm run lint:fix
 ```
+
+
+# Note for AI Clients
+When modifying or adding files, you MUST run the following commands to ensure code quality and formatting standards.
+If any warnings or errors occur, you MUST fix them before proceeding.
+
+```bash
+forge fmt
+npm run lint:fix
+``` 
