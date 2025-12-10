@@ -5,9 +5,10 @@ libs = ["lib"]
 remappings = [
     "@openzeppelin/=lib/openzeppelin-contracts/",
     "@openzeppelin-upgradeable/=lib/openzeppelin-contracts-upgradeable/",
-    "@layerzerolabs/lz-evm-protocol-v2/=lib/LayerZero-v2/packages/layerzero-v2/evm/protocol/",
-    "@layerzerolabs/lz-evm-messagelib-v2/=lib/LayerZero-v2/packages/layerzero-v2/evm/messagelib/",
-    "@layerzerolabs/oapp/=lib/LayerZero-v2/packages/layerzero-v2/evm/oapp/",
+    "@layerzerolabs/lz-evm-protocol-v2/=node_modules/@layerzerolabs/lz-evm-protocol-v2/",
+    "@layerzerolabs/lz-evm-messagelib-v2/=node_modules/@layerzerolabs/lz-evm-messagelib-v2/",
+    "@layerzerolabs/lz-evm-v1-0.7/=node_modules/@layerzerolabs/lz-evm-v1-0.7/",
+    "@layerzerolabs/oapp/=lib/devtools/packages/oapp-evm/",
     "solidity-bytes-utils/=lib/solidity-bytes-utils/",
     "forge-std/=lib/forge-std/src/"
 ]

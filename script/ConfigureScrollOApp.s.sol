@@ -4,11 +4,11 @@ pragma solidity 0.8.30;
 import {Script, console} from "forge-std/Script.sol";
 import {
     ILayerZeroEndpointV2
-} from "lib/LayerZero-v2/packages/layerzero-v2/evm/protocol/contracts/interfaces/ILayerZeroEndpointV2.sol";
+} from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
 import {
     SetConfigParam
-} from "lib/LayerZero-v2/packages/layerzero-v2/evm/protocol/contracts/interfaces/IMessageLibManager.sol";
-import {UlnConfig} from "lib/LayerZero-v2/packages/layerzero-v2/evm/messagelib/contracts/uln/UlnBase.sol"; // UlnConfigを直接インポート
+} from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/IMessageLibManager.sol";
+import {UlnConfig} from "@layerzerolabs/lz-evm-messagelib-v2/contracts/uln/UlnBase.sol"; // UlnConfigを直接インポート
 
 contract ConfigureScrollOApp is Script {
     address private constant ENDPOINT = 0x1a44076050125825900e736c501f859c50fE728c;

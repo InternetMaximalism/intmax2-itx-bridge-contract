@@ -16,6 +16,9 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@layerzerolabs/lz-evm-messagelib-v2": "^3.0.151",
+    "@layerzerolabs/lz-evm-protocol-v2": "^3.0.151",
+    "@layerzerolabs/lz-evm-v1-0.7": "^3.0.151",
     "solhint": "6.0.1"
   }
 }
