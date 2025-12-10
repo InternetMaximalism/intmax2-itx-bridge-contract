@@ -2,7 +2,6 @@
 pragma solidity 0.8.30;
 
 import {Test} from "forge-std/Test.sol";
-import {console} from "forge-std/console.sol"; // Add console import
 import {SenderBridgeOApp} from "../src/SenderBridgeOApp.sol";
 import {ReceiverBridgeOApp} from "../src/ReceiverBridgeOApp.sol";
 import {IReceiverBridgeOApp} from "../src/interfaces/IReceiverBridgeOApp.sol";
@@ -68,60 +67,41 @@ contract IntegrationTest is Test {
     uint32 public constant MAINNET_EID = 11155111;
 
     function setUp() public {
-        // Deploy tokens
         baseToken = new MockINTMAXToken();
         mainnetToken = new MockINTMAXToken();
-
-        // Deploy mock endpoints
         baseEndpoint = new MockEndpointV2(BASE_EID);
         mainnetEndpoint = new MockEndpointV2(MAINNET_EID);
 
-        // Deploy SenderBridgeOApp (Upgradeable)
-        // 1. Deploy Implementation
-        SenderBridgeOApp senderImpl = new SenderBridgeOApp(
-            address(baseEndpoint), // endpoint added to constructor
-            address(baseToken),
-            MAINNET_EID
-        );
-        
-        // Deploy Proxy without calling initialize in constructor
-        ERC1967Proxy senderProxy = new ERC1967Proxy(address(senderImpl), ""); // Empty data
-        
-        // Cast proxy to SenderBridgeOApp interface
+        _deploySenderBridge();
+        _deployReceiverBridge();
+        _setupPeers();
+
+        baseToken.setBalance(user, 1000 * 1e18);
+        mainnetToken.setBalance(address(receiverBridge), 10000 * 1e18);
+        vm.deal(user, 10 ether);
+    }
+
+    function _deploySenderBridge() internal {
+        SenderBridgeOApp senderImpl = new SenderBridgeOApp(address(baseEndpoint), address(baseToken), MAINNET_EID);
+        ERC1967Proxy senderProxy = new ERC1967Proxy(address(senderImpl), "");
         senderBridge = SenderBridgeOApp(address(senderProxy));
 
-        console.log("--- setUp start ---");
-        console.log("Test owner (address 0x1):", owner);
-        console.log("SenderBridgeOApp proxy address:", address(senderBridge));
-        console.log("SenderBridgeOApp implementation address:", address(senderImpl));
+        vm.prank(address(senderProxy));
+        senderBridge.initialize(owner, owner);
+    }
 
-        // Manually initialize the proxy by proxy address, setting owner to test owner
-        vm.prank(address(senderProxy)); // Set msg.sender to proxy address for initialization
-        senderBridge.initialize(owner, owner); // Pass delegate and owner
-
-        console.log("SenderBridgeOApp owner after initialize:", senderBridge.owner());
-        // Verify owner is set correctly
-        assertEq(senderBridge.owner(), owner, "SenderBridgeOApp owner should be set to test owner"); // Comment out to see console.log
-
-        // Deploy ReceiverBridgeOApp (Non-upgradeable)
+    function _deployReceiverBridge() internal {
         receiverBridge = new ReceiverBridgeOApp(address(mainnetEndpoint), owner, owner, address(mainnetToken));
+    }
 
-        // Setup peer connections
-        bytes32 peer = bytes32(uint256(uint160(address(receiverBridge)))); // DST_EID を getter 経由で取得
+    function _setupPeers() internal {
+        bytes32 peer = bytes32(uint256(uint160(address(receiverBridge))));
         uint32 dstEid = senderBridge.DST_EID();
-        vm.prank(senderBridge.owner()); // Add vm.prank again for setPeer, using reported owner
-        senderBridge.setPeer(dstEid, peer); 
+        vm.prank(senderBridge.owner());
+        senderBridge.setPeer(dstEid, peer);
 
         vm.prank(owner);
         receiverBridge.setPeer(BASE_EID, bytes32(uint256(uint160(address(senderBridge)))));
-
-        console.log("--- setUp end ---");
-
-        // Setup user balances
-        baseToken.setBalance(user, 1000 * 1e18);
-        mainnetToken.setBalance(address(receiverBridge), 10000 * 1e18);
-
-        vm.deal(user, 10 ether);
     }
 
     function test_EndToEndBridgeFlow() public {

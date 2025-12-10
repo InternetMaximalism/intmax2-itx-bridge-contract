@@ -3,31 +3,47 @@ pragma solidity 0.8.30;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {OwnableUpgradeable} from "@openzeppelin-upgradeable/access/OwnableUpgradeable.sol"; 
+
 import {ReentrancyGuardUpgradeable} from "@openzeppelin-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {MessagingFee, MessagingReceipt} from "@layerzerolabs/oapp-evm-upgradeable/contracts/oapp/OAppUpgradeable.sol";
-import {OAppSenderUpgradeable, OAppCoreUpgradeable} from "@layerzerolabs/oapp-evm-upgradeable/contracts/oapp/OAppSenderUpgradeable.sol";
+import {
+    OAppSenderUpgradeable,
+    OAppCoreUpgradeable
+} from "@layerzerolabs/oapp-evm-upgradeable/contracts/oapp/OAppSenderUpgradeable.sol";
 import {OptionsBuilder} from "@layerzerolabs/oapp/contracts/oapp/libs/OptionsBuilder.sol";
 import {Initializable} from "@openzeppelin-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ISenderBridgeOApp} from "./interfaces/ISenderBridgeOApp.sol";
 
 // Removed explicit OwnableUpgradeable inheritance as it is inherited via OAppSenderUpgradeable -> OAppCoreUpgradeable
-contract SenderBridgeOApp is Initializable, OAppSenderUpgradeable, ReentrancyGuardUpgradeable, UUPSUpgradeable, ISenderBridgeOApp {
+contract SenderBridgeOApp is
+    Initializable,
+    OAppSenderUpgradeable,
+    ReentrancyGuardUpgradeable,
+    UUPSUpgradeable,
+    ISenderBridgeOApp
+{
     using SafeERC20 for IERC20;
 
     IERC20 public immutable TOKEN;
     uint32 public immutable DST_EID;
-    
-    /// @dev Mapping of user addresses to their total bridged amounts
-    mapping(address => uint256) public bridgedAmount;
-    uint128 public gasLimit;
 
-    /**
-     * @dev Gap for future upgrades to add storage variables without shifting down storage
-     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
-     */
-    uint256[46] private __gap;
+    struct SenderBridgeOAppStorage {
+        mapping(address => uint256) bridgedAmount;
+        uint128 gasLimit;
+    }
+
+    // keccak256(abi.encode(uint256(keccak256("intmax2-itx-bridge-contract.storage.SenderBridgeOApp")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant SENDER_BRIDGE_OAPP_STORAGE_LOCATION =
+        0x0c954070df3306917f16f584e0220268582d774266395e5c707d72c83690d900;
+
+    function _getSenderBridgeOAppStorage() internal pure returns (SenderBridgeOAppStorage storage $) {
+        /* solhint-disable no-inline-assembly */
+        assembly {
+            $.slot := SENDER_BRIDGE_OAPP_STORAGE_LOCATION
+        }
+        /* solhint-enable no-inline-assembly */
+    }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(address _endpoint, address _token, uint32 _dstEid) OAppCoreUpgradeable(_endpoint) {
@@ -36,16 +52,14 @@ contract SenderBridgeOApp is Initializable, OAppSenderUpgradeable, ReentrancyGua
         _disableInitializers();
     }
 
-    function initialize(
-        address _delegate,
-        address _owner
-    ) public initializer {
+    function initialize(address _delegate, address _owner) public initializer {
         __OAppSender_init(_delegate);
         __Ownable_init(_owner);
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
-        
-        gasLimit = 200000;
+
+        SenderBridgeOAppStorage storage $ = _getSenderBridgeOAppStorage();
+        $.gasLimit = 200000;
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
@@ -57,9 +71,20 @@ contract SenderBridgeOApp is Initializable, OAppSenderUpgradeable, ReentrancyGua
      * @dev Emits GasLimitUpdated event
      */
     function setGasLimit(uint128 _gasLimit) external onlyOwner {
-        uint128 oldLimit = gasLimit;
-        gasLimit = _gasLimit;
+        SenderBridgeOAppStorage storage $ = _getSenderBridgeOAppStorage();
+        uint128 oldLimit = $.gasLimit;
+        $.gasLimit = _gasLimit;
         emit GasLimitUpdated(oldLimit, _gasLimit);
+    }
+
+    function gasLimit() external view returns (uint128) {
+        SenderBridgeOAppStorage storage $ = _getSenderBridgeOAppStorage();
+        return $.gasLimit;
+    }
+
+    function bridgedAmount(address user) external view returns (uint256) {
+        SenderBridgeOAppStorage storage $ = _getSenderBridgeOAppStorage();
+        return $.bridgedAmount[user];
     }
 
     /**
@@ -79,9 +104,10 @@ contract SenderBridgeOApp is Initializable, OAppSenderUpgradeable, ReentrancyGua
         require(recipient != address(0), RecipientZero());
 
         (uint256 current, uint256 delta) = _getCurrentAndDelta();
-        
+
         // Update local state directly
-        bridgedAmount[_msgSender()] = current;
+        SenderBridgeOAppStorage storage $ = _getSenderBridgeOAppStorage();
+        $.bridgedAmount[_msgSender()] = current;
         emit BridgedAmountUpdated(_msgSender(), current);
 
         bytes memory payload = abi.encode(recipient, delta, _msgSender());
@@ -106,7 +132,8 @@ contract SenderBridgeOApp is Initializable, OAppSenderUpgradeable, ReentrancyGua
 
     function _getCurrentAndDelta() private view returns (uint256 current, uint256 delta) {
         current = TOKEN.balanceOf(_msgSender());
-        uint256 prev = bridgedAmount[_msgSender()];
+        SenderBridgeOAppStorage storage $ = _getSenderBridgeOAppStorage();
+        uint256 prev = $.bridgedAmount[_msgSender()];
         require(current > prev, BalanceLessThanBridged());
         delta = current - prev;
         require(delta > 0, NoDelta());
@@ -117,6 +144,7 @@ contract SenderBridgeOApp is Initializable, OAppSenderUpgradeable, ReentrancyGua
      * @return The encoded options for LayerZero message execution
      */
     function _getDefaultOptions() private view returns (bytes memory) {
-        return OptionsBuilder.addExecutorLzReceiveOption(OptionsBuilder.newOptions(), gasLimit, 0);
+        SenderBridgeOAppStorage storage $ = _getSenderBridgeOAppStorage();
+        return OptionsBuilder.addExecutorLzReceiveOption(OptionsBuilder.newOptions(), $.gasLimit, 0);
     }
 }

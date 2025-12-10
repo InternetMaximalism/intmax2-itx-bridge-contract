@@ -2,7 +2,7 @@
 pragma solidity 0.8.30;
 
 import {Test} from "forge-std/Test.sol";
-import {console} from "forge-std/console.sol"; // Add console import
+// Add console import
 import {SenderBridgeOApp} from "../src/SenderBridgeOApp.sol";
 import {ISenderBridgeOApp} from "../src/interfaces/ISenderBridgeOApp.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -64,7 +64,7 @@ contract SenderBridgeOAppTest is Test {
 
         // Deploy Proxy without calling initialize in constructor
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), ""); // Empty data
-        
+
         // Cast proxy to SenderBridgeOApp interface
         senderBridge = SenderBridgeOApp(address(proxy));
 
@@ -81,7 +81,7 @@ contract SenderBridgeOAppTest is Test {
         bytes32 peer = bytes32(uint256(uint160(owner)));
         uint32 dstEid = senderBridge.DST_EID();
         vm.prank(senderBridge.owner()); // Add vm.prank again for setPeer, using reported owner
-        senderBridge.setPeer(dstEid, peer); 
+        senderBridge.setPeer(dstEid, peer);
 
         INTMAX.setBalance(user, 1000 * 1e18);
         vm.deal(user, 10 ether);

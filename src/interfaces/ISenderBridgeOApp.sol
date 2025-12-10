@@ -22,7 +22,7 @@ interface ISenderBridgeOApp {
      * @param newLimit The new gas limit value
      */
     event GasLimitUpdated(uint128 oldLimit, uint128 newLimit);
-    
+
     /**
      * @dev Emitted when a bridge request is initiated
      * @param recipient The recipient address on destination chain
