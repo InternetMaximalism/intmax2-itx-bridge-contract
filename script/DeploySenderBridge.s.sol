@@ -3,7 +3,6 @@ pragma solidity 0.8.30;
 
 import {Script, console} from "forge-std/Script.sol";
 import {SenderBridgeOApp} from "../src/SenderBridgeOApp.sol";
-import {BridgeStorage} from "../src/BridgeStorage.sol";
 
 // forge script script/DeploySenderBridge.s.sol:DeploySenderBridge --rpc-url https://base.meowrpc.com --broadcast --etherscan-api-key ${API KEY} --verify
 contract DeploySenderBridge is Script {
@@ -26,10 +25,6 @@ contract DeploySenderBridge is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        // Deploy BridgeStorage contract first
-        BridgeStorage bridgeStorage = new BridgeStorage(deployer);
-        console.log("Bridge Storage deployed to:", address(bridgeStorage));
-
         // Deploy SenderBridgeOApp
         SenderBridgeOApp senderBridge = new SenderBridgeOApp(
             endpoint, // endpoint
@@ -40,17 +35,8 @@ contract DeploySenderBridge is Script {
         );
         console.log("Sender Bridge deployed to:", address(senderBridge));
 
-        // Set bridge storage in SenderBridgeOApp
-        senderBridge.setBridgeStorage(address(bridgeStorage));
-        console.log("Bridge storage set in SenderBridgeOApp");
-
-        // Transfer ownership of BridgeStorage to SenderBridgeOApp
-        bridgeStorage.transferOwnership(address(senderBridge));
-        console.log("BridgeStorage ownership transferred to SenderBridgeOApp");
-
         console.log("=== Deployment Summary ===");
         console.log("SenderBridgeOApp:", address(senderBridge));
-        console.log("BridgeStorage:", address(bridgeStorage));
         console.log("=========================");
 
         vm.stopBroadcast();

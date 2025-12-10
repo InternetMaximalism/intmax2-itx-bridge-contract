@@ -3,9 +3,7 @@ pragma solidity 0.8.30;
 
 import {Test} from "forge-std/Test.sol";
 import {SenderBridgeOApp} from "../src/SenderBridgeOApp.sol";
-import {BridgeStorage} from "../src/BridgeStorage.sol";
 import {ISenderBridgeOApp} from "../src/interfaces/ISenderBridgeOApp.sol";
-import {IBridgeStorage} from "../src/interfaces/IBridgeStorage.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {MessagingFee, MessagingReceipt} from "@layerzerolabs/oapp/contracts/oapp/OApp.sol";
 import {MockEndpointV2} from "./utils/MockEndpoint.t.sol";
@@ -44,7 +42,6 @@ contract MockINTMAXToken is IERC20 {
 
 contract SenderBridgeOAppTest is Test {
     SenderBridgeOApp public senderBridge;
-    BridgeStorage public bridgeStorage;
     MockINTMAXToken public INTMAX;
     MockEndpointV2 public endpoint;
     address public owner = address(0x1);
@@ -56,9 +53,6 @@ contract SenderBridgeOAppTest is Test {
         INTMAX = new MockINTMAXToken();
         endpoint = new MockEndpointV2(1); // Base chain EID
 
-        // Deploy BridgeStorage
-        bridgeStorage = new BridgeStorage(owner);
-
         // Deploy SenderBridgeOApp
         senderBridge = new SenderBridgeOApp(
             address(endpoint), // mock endpoint
@@ -67,14 +61,6 @@ contract SenderBridgeOAppTest is Test {
             address(INTMAX), // token
             DST_EID
         );
-
-        // Set bridge storage
-        vm.prank(owner);
-        senderBridge.setBridgeStorage(address(bridgeStorage));
-
-        // Transfer ownership of BridgeStorage to SenderBridgeOApp
-        vm.prank(owner);
-        bridgeStorage.transferOwnership(address(senderBridge));
 
         // Set peer so OAppCore._getPeerOrRevert won't revert during tests
         bytes32 peer = bytes32(uint256(uint160(owner)));
@@ -87,6 +73,10 @@ contract SenderBridgeOAppTest is Test {
 
     function test_BridgeToSuccess() public {
         vm.prank(user);
+
+        // Expect BridgedAmountUpdated event
+        vm.expectEmit(true, false, false, true);
+        emit ISenderBridgeOApp.BridgedAmountUpdated(user, 1000 * 1e18);
 
         // Expect BridgeRequested event - only check indexed fields, not the receipt details
         vm.expectEmit(true, true, false, false);
@@ -156,6 +146,10 @@ contract SenderBridgeOAppTest is Test {
         INTMAX.setBalance(user, 1500 * 1e18);
 
         vm.prank(user);
+
+        // Expect BridgedAmountUpdated event
+        vm.expectEmit(true, false, false, true);
+        emit ISenderBridgeOApp.BridgedAmountUpdated(user, 1500 * 1e18);
 
         // Expect BridgeRequested event for partial amount (500 * 1e18) - only check indexed fields
         vm.expectEmit(true, true, false, false);
@@ -230,73 +224,6 @@ contract SenderBridgeOAppTest is Test {
         // This test demonstrates that reentrancy protection is in place by verifying the modifier works as expected
         bool success = reentrancyTest.testReentrancy();
         assertTrue(success, "Reentrancy protection should be working");
-    }
-
-    function test_TransferStorageOwnershipSuccess() public {
-        address newOwner = address(0x999);
-
-        // Only owner should be able to call transferStorageOwnership
-        vm.prank(owner);
-        senderBridge.transferStorageOwnership(newOwner);
-
-        // Verify BridgeStorage ownership actually changed
-        assertEq(bridgeStorage.owner(), newOwner);
-    }
-
-    function test_TransferStorageOwnershipRevertNotOwner() public {
-        address newOwner = address(0x999);
-
-        // Non-owner should not be able to transfer storage ownership
-        vm.prank(user);
-        vm.expectRevert();
-        senderBridge.transferStorageOwnership(newOwner);
-    }
-
-    function test_SetBridgeStorageEmitsEvent() public {
-        address newBridgeStorage = address(new BridgeStorage(owner));
-        address oldStorage = address(bridgeStorage);
-
-        // Expect BridgeStorageUpdated event
-        vm.expectEmit(true, true, false, true);
-        emit ISenderBridgeOApp.BridgeStorageUpdated(oldStorage, newBridgeStorage);
-
-        vm.prank(owner);
-        senderBridge.setBridgeStorage(newBridgeStorage);
-    }
-
-    function test_SetBridgeStorageRevertNotOwner() public {
-        address newBridgeStorage = address(new BridgeStorage(owner));
-
-        vm.prank(user);
-        vm.expectRevert();
-        senderBridge.setBridgeStorage(newBridgeStorage);
-    }
-
-    function test_SetBridgeStorageRevertInvalidAddress() public {
-        vm.prank(owner);
-        vm.expectRevert(ISenderBridgeOApp.InvalidBridgeStorage.selector);
-        senderBridge.setBridgeStorage(address(0));
-    }
-
-    function test_BridgeStoragePublicGetter() public view {
-        // Verify that bridgeStorage is publicly accessible
-        IBridgeStorage currentStorage = senderBridge.bridgeStorage();
-        assertEq(address(currentStorage), address(bridgeStorage));
-    }
-
-    function test_BridgeStorageUpdatedAfterSet() public {
-        address newBridgeStorage = address(new BridgeStorage(owner));
-
-        // Verify initial storage
-        assertEq(address(senderBridge.bridgeStorage()), address(bridgeStorage));
-
-        // Update storage
-        vm.prank(owner);
-        senderBridge.setBridgeStorage(newBridgeStorage);
-
-        // Verify storage was updated
-        assertEq(address(senderBridge.bridgeStorage()), newBridgeStorage);
-        assertNotEq(address(senderBridge.bridgeStorage()), address(bridgeStorage));
     }
 
     function test_SetGasLimitSuccess() public {

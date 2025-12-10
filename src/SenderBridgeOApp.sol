@@ -9,14 +9,16 @@ import {MessagingFee, MessagingReceipt} from "@layerzerolabs/oapp/contracts/oapp
 import {OAppSender, OAppCore} from "@layerzerolabs/oapp/contracts/oapp/OAppSender.sol";
 import {OptionsBuilder} from "@layerzerolabs/oapp/contracts/oapp/libs/OptionsBuilder.sol";
 import {ISenderBridgeOApp} from "./interfaces/ISenderBridgeOApp.sol";
-import {IBridgeStorage} from "./interfaces/IBridgeStorage.sol";
 
 contract SenderBridgeOApp is OAppSender, ReentrancyGuard, ISenderBridgeOApp {
     using SafeERC20 for IERC20;
 
     IERC20 private immutable TOKEN;
     uint32 private immutable DST_EID;
-    IBridgeStorage public bridgeStorage;
+    
+    /// @dev Mapping of user addresses to their total bridged amounts
+    mapping(address => uint256) private _bridgedAmount;
+    
     uint128 public gasLimit = 200000;
 
     constructor(address _endpoint, address _delegate, address _owner, address _token, uint32 _dstEid)
@@ -41,7 +43,7 @@ contract SenderBridgeOApp is OAppSender, ReentrancyGuard, ISenderBridgeOApp {
     }
 
     function bridgedAmount(address user) external view returns (uint256) {
-        return bridgeStorage.getBridgedAmount(user);
+        return _bridgedAmount[user];
     }
 
     /**
@@ -57,22 +59,14 @@ contract SenderBridgeOApp is OAppSender, ReentrancyGuard, ISenderBridgeOApp {
         return _quote(DST_EID, payload, options, false);
     }
 
-    function setBridgeStorage(address _bridgeStorage) external onlyOwner {
-        require(_bridgeStorage != address(0), InvalidBridgeStorage());
-        address oldStorage = address(bridgeStorage);
-        bridgeStorage = IBridgeStorage(_bridgeStorage);
-        emit BridgeStorageUpdated(oldStorage, _bridgeStorage);
-    }
-
-    function transferStorageOwnership(address newOwner) external onlyOwner {
-        bridgeStorage.transferStorageOwnership(newOwner);
-    }
-
     function bridgeTo(address recipient) external payable nonReentrant {
         require(recipient != address(0), RecipientZero());
 
         (uint256 current, uint256 delta) = _getCurrentAndDelta();
-        bridgeStorage.setBridgedAmount(_msgSender(), current);
+        
+        // Update local state directly
+        _bridgedAmount[_msgSender()] = current;
+        emit BridgedAmountUpdated(_msgSender(), current);
 
         bytes memory payload = abi.encode(recipient, delta, _msgSender());
         // see https://docs.layerzero.network/v2/tools/sdks/options#evm-solidity
@@ -96,7 +90,7 @@ contract SenderBridgeOApp is OAppSender, ReentrancyGuard, ISenderBridgeOApp {
 
     function _getCurrentAndDelta() private view returns (uint256 current, uint256 delta) {
         current = TOKEN.balanceOf(_msgSender());
-        uint256 prev = bridgeStorage.getBridgedAmount(_msgSender());
+        uint256 prev = _bridgedAmount[_msgSender()];
         require(current > prev, BalanceLessThanBridged());
         delta = current - prev;
         require(delta > 0, NoDelta());

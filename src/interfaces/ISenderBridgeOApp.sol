@@ -16,15 +16,13 @@ interface ISenderBridgeOApp {
     /// @dev Thrown when insufficient native fee is provided for bridging
     error InsufficientNativeFee();
 
-    /// @dev Thrown when an invalid bridge storage address is provided (e.g., zero address)
-    error InvalidBridgeStorage();
-
     /**
      * @dev Emitted when the gas limit for LayerZero execution is updated
      * @param oldLimit The previous gas limit value
      * @param newLimit The new gas limit value
      */
     event GasLimitUpdated(uint128 oldLimit, uint128 newLimit);
+    
     /**
      * @dev Emitted when a bridge request is initiated
      * @param recipient The recipient address on destination chain
@@ -35,11 +33,11 @@ interface ISenderBridgeOApp {
     event BridgeRequested(address indexed recipient, uint256 amount, address indexed user, MessagingReceipt receipt);
 
     /**
-     * @dev Emitted when the bridge storage contract is updated
-     * @param oldStorage The previous bridge storage contract address
-     * @param newStorage The new bridge storage contract address
+     * @dev Emitted when the bridged amount for a user is updated
+     * @param user The user address
+     * @param amount The new total bridged amount
      */
-    event BridgeStorageUpdated(address indexed oldStorage, address indexed newStorage);
+    event BridgedAmountUpdated(address indexed user, uint256 amount);
 
     /**
      * @notice Set the gas limit for LayerZero message execution on the destination chain
@@ -68,12 +66,4 @@ interface ISenderBridgeOApp {
      * @return The total amount of tokens bridged by the user
      */
     function bridgedAmount(address user) external view returns (uint256);
-
-    /**
-     * @notice Transfer ownership of the BridgeStorage contract
-     * @param newOwner The address of the new owner for BridgeStorage
-     * @dev Only callable by contract owner
-     * @dev Reverts if newOwner is the zero address
-     */
-    function transferStorageOwnership(address newOwner) external;
 }

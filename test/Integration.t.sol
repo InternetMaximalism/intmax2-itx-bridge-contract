@@ -4,7 +4,6 @@ pragma solidity 0.8.30;
 import {Test} from "forge-std/Test.sol";
 import {SenderBridgeOApp} from "../src/SenderBridgeOApp.sol";
 import {ReceiverBridgeOApp} from "../src/ReceiverBridgeOApp.sol";
-import {BridgeStorage} from "../src/BridgeStorage.sol";
 import {IReceiverBridgeOApp} from "../src/interfaces/IReceiverBridgeOApp.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {MessagingFee} from "@layerzerolabs/oapp/contracts/oapp/OApp.sol";
@@ -54,7 +53,6 @@ contract MockINTMAXToken is IERC20 {
 contract IntegrationTest is Test {
     SenderBridgeOApp public senderBridge;
     ReceiverBridgeOApp public receiverBridge;
-    BridgeStorage public bridgeStorage;
     MockINTMAXToken public baseToken;
     MockINTMAXToken public mainnetToken;
     MockEndpointV2 public baseEndpoint;
@@ -76,20 +74,10 @@ contract IntegrationTest is Test {
         baseEndpoint = new MockEndpointV2(BASE_EID);
         mainnetEndpoint = new MockEndpointV2(MAINNET_EID);
 
-        // Deploy BridgeStorage
-        bridgeStorage = new BridgeStorage(owner);
-
         // Deploy bridge contracts
         senderBridge = new SenderBridgeOApp(address(baseEndpoint), owner, owner, address(baseToken), MAINNET_EID);
 
         receiverBridge = new ReceiverBridgeOApp(address(mainnetEndpoint), owner, owner, address(mainnetToken));
-
-        // Setup BaseBridge with storage
-        vm.prank(owner);
-        senderBridge.setBridgeStorage(address(bridgeStorage));
-
-        vm.prank(owner);
-        bridgeStorage.transferOwnership(address(senderBridge));
 
         // Setup peer connections
         vm.prank(owner);
