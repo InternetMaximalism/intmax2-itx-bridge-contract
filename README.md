@@ -132,6 +132,49 @@ cast send <ITX_TOKEN> "transfer(address,uint256)" <RECEIVER_OAPP> <AMOUNT> --rpc
     cast send <SENDER_OAPP> "bridgeTo(address)" <RECIPIENT> --value <NATIVE_FEE> --rpc-url <SOURCE_RPC> --private-key <USER_KEY>
     ```
 
+## 🤖 Automated Multi-Chain Deployment (Advanced)
+
+For advanced users, a multi-chain deployment script is available to deploy contracts to Ethereum, Scroll, and Base, and automatically configure peers in a single execution.
+
+### 1. Configure .env
+
+Ensure all the following variables are set in your `.env` file.
+
+```ini
+# Deployer
+PRIVATE_KEY=0x...
+
+# LayerZero Config
+BASE_EID=30184
+# Endpoints (Required by deploy scripts)
+ETH_ENDPOINT=0x1a44076050125825900e736c501f859c50fE728c
+SCROLL_ENDPOINT=0x... 
+BASE_ENDPOINT=0x1a44076050125825900e736c501f859c50fE728c
+
+# Ethereum (Sender) Params
+ETHEREUM_DELEGATE=0x...
+ETHEREUM_OWNER=0x...
+ETHEREUM_OLD_TOKEN=0x...
+
+# Scroll (Sender) Params
+SCROLL_DELEGATE=0x...
+SCROLL_OWNER=0x...
+SCROLL_OLD_TOKEN=0x...
+
+# Base (Receiver) Params
+BASE_DELEGATE=0x...
+BASE_OWNER=0x...
+BASE_OLD_TOKEN=0x...
+```
+
+### 2. Run the Script
+
+This script uses `vm.createSelectFork` to switch between chains defined in `foundry.toml`. Ensure your `foundry.toml` has valid RPC endpoints for `ethereum`, `base`, and `scroll`.
+
+```bash
+forge script script/DeployAndSetPeerAllMainnet.s.sol:DeployAndSetPeerAllMainnet --broadcast --verify
+```
+
 ## 🛠 Development Commands
 
 ```bash

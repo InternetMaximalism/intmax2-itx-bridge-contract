@@ -13,27 +13,23 @@ contract DeployReceiverBridge is Script {
 
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(deployerPrivateKey);
+        deploy(endpoint, token, deployer, deployer);
 
+        vm.stopBroadcast();
+    }
+
+    function deploy(address endpoint, address delegate, address owner, address token) public returns (address) {
         // Display configuration
         console.log("=== Receiver Bridge Deployment Configuration ===");
         console.log("Endpoint:", endpoint);
+        console.log("Delegate:", delegate);
+        console.log("Owner:", owner);
         console.log("Token:", token);
-        console.log("Deployer:", deployer);
         console.log("==============================================");
-
-        vm.startBroadcast(deployerPrivateKey);
-
-        ReceiverBridgeOApp receiverBridge = new ReceiverBridgeOApp(
-            endpoint, // endpoint
-            deployer, // delegate
-            deployer, // owner
-            token // token
-        );
-
+        ReceiverBridgeOApp receiverBridge = new ReceiverBridgeOApp(endpoint, delegate, owner, token);
         console.log("=== Deployment Summary ===");
         console.log("ReceiverBridgeOApp:", address(receiverBridge));
         console.log("=========================");
-
-        vm.stopBroadcast();
+        return address(receiverBridge);
     }
 }

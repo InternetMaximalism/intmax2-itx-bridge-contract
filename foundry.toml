@@ -16,3 +16,8 @@ remappings = [
     "forge-std/=lib/forge-std/src/"
 ]
 solc = "0.8.31"
+
+[rpc_endpoints]
+ethereum = "https://0xrpc.io/eth"
+base = "https://base.meowrpc.com"
+scroll = "https://scroll.drpc.org"

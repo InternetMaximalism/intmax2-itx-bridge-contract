@@ -15,16 +15,25 @@ contract DeploySenderBridge is Script {
 
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(deployerPrivateKey);
+        vm.startBroadcast(deployerPrivateKey);
 
+        deploy(endpoint, deployer, deployer, token, dstEid);
+
+        vm.stopBroadcast();
+    }
+
+    function deploy(address endpoint, address delegate, address owner, address token, uint32 dstEid)
+        public
+        returns (address)
+    {
         // Display configuration
         console.log("=== Sender Bridge Deployment Configuration ===");
         console.log("Endpoint:", endpoint);
+        console.log("Delegate:", delegate);
+        console.log("Owner:", owner);
         console.log("Token:", token);
         console.log("Destination EID:", dstEid);
-        console.log("Deployer:", deployer);
-        console.log("===========================================");
-
-        vm.startBroadcast(deployerPrivateKey);
+        console.log("==============================================");
 
         // 1. Deploy Implementation
         // Constructor: (address _endpoint, address _token, uint32 _dstEid)
@@ -35,7 +44,7 @@ contract DeploySenderBridge is Script {
         // initialize(address _delegate, address _owner)
         bytes memory initData = abi.encodeCall(
             SenderBridgeOApp.initialize,
-            (deployer, deployer) // _delegate, _owner set to deployer
+            (delegate, owner) // _delegate, _owner
         );
 
         // 3. Deploy Proxy
@@ -47,6 +56,6 @@ contract DeploySenderBridge is Script {
         console.log("Implementation Address:", address(implementation));
         console.log("=========================");
 
-        vm.stopBroadcast();
+        return address(proxy);
     }
 }
