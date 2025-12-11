@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.31;
 
 import {Script, console} from "forge-std/Script.sol";
 import {SenderBridgeOApp} from "../src/SenderBridgeOApp.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-// forge script script/DeploySenderBridge.s.sol:DeploySenderBridge --rpc-url https://base.meowrpc.com --broadcast --etherscan-api-key ${API KEY} --verify
+// forge script script/DeploySenderBridge.s.sol:DeploySenderBridge --rpc-url <RPC> --broadcast --verify
 contract DeploySenderBridge is Script {
     function run() external {
         // Load configuration from environment variables
-        address endpoint = vm.envAddress("L2_ENDPOINT");
-        address token = vm.envAddress("L2_TOKEN");
-        uint32 dstEid = uint32(vm.envUint("L2_DST_EID"));
+        address endpoint = vm.envAddress("ENDPOINT");
+        address token = vm.envAddress("TOKEN");
+        uint32 dstEid = uint32(vm.envUint("DST_EID"));
 
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(deployerPrivateKey);
@@ -35,7 +35,7 @@ contract DeploySenderBridge is Script {
         // initialize(address _delegate, address _owner)
         bytes memory initData = abi.encodeCall(
             SenderBridgeOApp.initialize,
-            (deployer, deployer) // _delegate, _owner を deployer に設定
+            (deployer, deployer) // _delegate, _owner set to deployer
         );
 
         // 3. Deploy Proxy

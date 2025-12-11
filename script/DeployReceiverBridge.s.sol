@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.31;
 
 import {Script, console} from "forge-std/Script.sol";
 import {ReceiverBridgeOApp} from "../src/ReceiverBridgeOApp.sol";
 
-// forge script script/DeployReceiverBridge.s.sol:DeployReceiverBridge --rpc-url https://ethereum-sepolia-rpc.publicnode.com --broadcast --etherscan-api-key $ETHERSCAN_API_KEY --verify
+// forge script script/DeployReceiverBridge.s.sol:DeployReceiverBridge --rpc-url <RPC> --broadcast --verify
 contract DeployReceiverBridge is Script {
     function run() external {
         // Load configuration from environment variables
-        address endpoint = vm.envAddress("L1_ENDPOINT");
-        address token = vm.envAddress("L1_TOKEN");
+        address endpoint = vm.envAddress("ENDPOINT");
+        address token = vm.envAddress("TOKEN");
 
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(deployerPrivateKey);

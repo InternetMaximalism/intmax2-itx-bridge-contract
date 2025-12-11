@@ -15,4 +15,4 @@ remappings = [
     "solidity-bytes-utils/=lib/solidity-bytes-utils/",
     "forge-std/=lib/forge-std/src/"
 ]
-solc = "0.8.30"
+solc = "0.8.31"

@@ -1,27 +1,23 @@
 # INTMAX2 ITX Bridge Contract
 
 ![License](https://img.shields.io/badge/License-MIT-blue.svg)
-![Solidity](https://img.shields.io/badge/Solidity-0.8.30-363636.svg)
+![Solidity](https://img.shields.io/badge/Solidity-0.8.31-363636.svg)
 ![LayerZero](https://img.shields.io/badge/LayerZero-V2-orange.svg)
 
-Implementation of the ITX token bridge between L2s (Base, Scroll) and Ethereum using LayerZero v2.
+Implementation of the ITX token bridge from Ethereum/Scroll to Base using LayerZero v2.
 
 ## 🌉 Architecture
 
 ```mermaid
 graph LR
-    User((User)) --> |1. bridgeTo| Sender["SenderBridgeOApp<br>(L2: Base/Scroll)"]
+    User((User)) --> |1. bridgeTo| Sender["SenderBridgeOApp<br>(Source: Ethereum/Scroll)"]
     Sender --> |2. Verify & Send| LZ[LayerZero Endpoint]
-    LZ --> |3. Receive| Receiver["ReceiverBridgeOApp<br>(L1: Ethereum)"]
+    LZ --> |3. Receive| Receiver["ReceiverBridgeOApp<br>(Dest: Base)"]
     Receiver --> |4. Transfer ITX| Recipient((Recipient))
-    
-    subgraph "L2 Side"
-    Sender -.-> Storage[BridgeStorage]
-    end
 ```
 
 - **Sender OApp**: Calculates `delta` (Current Balance - Bridged Amount) and sends the message.
-- **Receiver OApp**: Receives the message and transfers the specified amount of ITX tokens from its own balance.
+- **Receiver OApp**: Receives the message and transfers the specified amount of ITX tokens from its own balance on Base.
 
 ## 🚀 Setup Guide (Mainnet)
 
@@ -35,137 +31,105 @@ PRIVATE_KEY=0x...
 ETHERSCAN_API_KEY=...
 
 # Endpoints (LayerZero V2)
-L1_ENDPOINT=0x... # Ethereum Endpoint
-L2_ENDPOINT=0x... # L2 Endpoint (Base/Scroll)
+BASE_ENDPOINT=0x... # Base Endpoint (Receiver)
+ETH_ENDPOINT=0x... # Ethereum Endpoint (Sender)
+SCROLL_ENDPOINT=0x... # Scroll Endpoint (Sender)
 
 # Tokens
-L1_TOKEN=0x... # Ethereum old ITX token address
-L2_TOKEN=0x... # L2 old ITX token address
+BASE_TOKEN=0x... # Base ITX token address
+ETH_TOKEN=0x... # Ethereum ITX token address
+SCROLL_TOKEN=0x... # Scroll ITX token address
 
 # Destination EIDs
-L2_DST_EID=3... # Ethereum EID (e.g., 30101)
+BASE_DST_EID=30184 # Base EID (Destination for all senders)
 
 ```
 
 ### 1. Deploy Contracts
 
-#### Ethereum (Receiver)
+#### Base (Receiver)
 ```bash
-# Set L1_ENDPOINT and L1_TOKEN in .env
-forge script script/DeployReceiverBridge.s.sol:DeployReceiverBridge --rpc-url <ETH_RPC> --broadcast --verify
+# Set BASE_ENDPOINT and BASE_TOKEN in .env
+forge script script/DeployReceiverBridge.s.sol:DeployReceiverBridge --rpc-url <BASE_RPC> --broadcast --verify
 ```
 
-#### L2s (Sender)
+#### Ethereum & Scroll (Sender)
 ```bash
-# Set L2_ENDPOINT, L2_TOKEN, L2_DST_EID (Ethereum EID) in .env
-# For Base
-forge script script/DeploySenderBridge.s.sol:DeploySenderBridge --rpc-url <BASE_RPC> --broadcast --verify
+# Set ETH_ENDPOINT, ETH_TOKEN, BASE_DST_EID in .env
+# For Ethereum
+forge script script/DeploySenderBridge.s.sol:DeploySenderBridge --rpc-url <ETH_RPC> --broadcast --verify
 
+# Set SCROLL_ENDPOINT, SCROLL_TOKEN, BASE_DST_EID in .env
 # For Scroll
-forge script script/DeploySenderBridge.s.sol:DeployReceiverBridge --rpc-url <SCROLL_RPC> --broadcast --verify
+forge script script/DeploySenderBridge.s.sol:DeploySenderBridge --rpc-url <SCROLL_RPC> --broadcast --verify
 ```
 
 ### 2. Peer Configuration (Bidirectional)
 
-Connect L2 Sender and L1 Receiver by setting peers on both sides.
+Connect Sender (Ethereum/Scroll) and Receiver (Base) by setting peers.
 
 ```bash
-# SENDER_OAPP: Deployed SenderBridgeOApp address on L2 (Base/Scroll)
-# RECEIVER_OAPP: Deployed ReceiverBridgeOApp address on L1 (Ethereum)
-# <ETHEREUM_EID>: Ethereum EID (e.g., 30101)
+# SENDER_OAPP: Deployed SenderBridgeOApp address (Ethereum/Scroll)
+# RECEIVER_OAPP: Deployed ReceiverBridgeOApp address (Base)
 # <BASE_EID>: Base EID (e.g., 30184)
+# <ETH_EID>: Ethereum EID (e.g., 30101)
 # <SCROLL_EID>: Scroll EID (e.g., 30214)
 
-# 1. L2 -> L1 (Run on Base/Scroll)
-cast send <SENDER_OAPP> "setPeer(uint32,bytes32)" <ETHEREUM_EID> <RECEIVER_OAPP_BYTES32> --rpc-url <L2_RPC> --private-key $PRIVATE_KEY
+# 1. Sender -> Receiver (Run on Ethereum/Scroll)
+cast send <SENDER_OAPP> "setPeer(uint32,bytes32)" <BASE_EID> <RECEIVER_OAPP_BYTES32> --rpc-url <SOURCE_RPC> --private-key $PRIVATE_KEY
 
-# 2. L1 -> L2 (Run on Ethereum)
-# For Base
-cast send <RECEIVER_OAPP> "setPeer(uint32,bytes32)" <BASE_EID> <BASE_SENDER_OAPP_BYTES32> --rpc-url <ETH_RPC> --private-key $PRIVATE_KEY
-# For Scroll
-cast send <RECEIVER_OAPP> "setPeer(uint32,bytes32)" <SCROLL_EID> <SCROLL_SENDER_OAPP_BYTES32> --rpc-url <ETH_RPC> --private-key $PRIVATE_KEY
+# 2. Receiver -> Sender (Run on Base)
+# Link Base to Ethereum
+cast send <RECEIVER_OAPP> "setPeer(uint32,bytes32)" <ETH_EID> <ETH_SENDER_OAPP_BYTES32> --rpc-url <BASE_RPC> --private-key $PRIVATE_KEY
+# Link Base to Scroll
+cast send <RECEIVER_OAPP> "setPeer(uint32,bytes32)" <SCROLL_EID> <SCROLL_SENDER_OAPP_BYTES32> --rpc-url <BASE_RPC> --private-key $PRIVATE_KEY
 ```
 
 ### 3. DVN Configuration (Critical)
 
-Explicit DVN configuration is required for Mainnet to ensure message verification works correctly.
-
-#### Sender Side (L2)
-Configure the Sender OApp to use the correct DVN (e.g., LayerZero Labs / Google Cloud).
+#### Sender Side (Ethereum/Scroll)
+Configure the Sender OApp to use the correct DVN.
 
 ```bash
-# SENDER_OAPP: Deployed SenderBridgeOApp address on L2
-# Example for Base
-export BASE_SENDER_OAPP=<Deployed_Address> # Base SenderBridgeOApp address
-forge script script/ConfigureBaseOApp.s.sol:ConfigureBaseOApp --rpc-url <BASE_RPC> --private-key $PRIVATE_KEY --broadcast
-
-# Example for Scroll
-export SCROLL_SENDER_OAPP=<Deployed_Address> # Scroll SenderBridgeOApp address
-forge script script/ConfigureScrollOApp.s.sol:ConfigureScrollOApp --rpc-url <SCROLL_RPC> --private-key $PRIVATE_KEY --broadcast
+# Example for Ethereum
+forge script script/ConfigureSenderOApp.s.sol:ConfigureSenderOApp --rpc-url <ETH_RPC> --private-key $PRIVATE_KEY --broadcast
 ```
 
-#### Receiver Side (L1)
-Configure the Receiver OApp to accept messages verified by specific DVNs from each L2.
+#### Receiver Side (Base)
+Configure the Receiver OApp to accept messages from Ethereum and Scroll.
 
 ```bash
-# RECEIVER_OAPP: Deployed ReceiverBridgeOApp address on L1
-export L1_RECEIVER_OAPP=<Deployed_Address>
-
-# Configure for Base
-forge script script/ConfigureEthereumBaseReceiver.s.sol:ConfigureEthereumBaseReceiver --rpc-url <ETH_RPC> --private-key $PRIVATE_KEY --broadcast
-
-# Configure for Scroll
-forge script script/ConfigureEthereumScrollReceiver.s.sol:ConfigureEthereumScrollReceiver --rpc-url <ETH_RPC> --private-key $PRIVATE_KEY --broadcast
+# Configure Base Receiver
+forge script script/ConfigureBaseReceiver.s.sol:ConfigureBaseReceiver --rpc-url <BASE_RPC> --private-key $PRIVATE_KEY --broadcast
 ```
 
-<details>
-<summary>ℹ️ Click to see detailed UlnConfig explanation</summary>
+### 4. Receiver Token Setup (on Base)
 
-`UlnConfig` struct defines how messages are verified:
-
-- **confirmations**: Block confirmations to wait on source chain (e.g., 15-25).
-- **requiredDVNCount**: Number of required signatures.
-- **requiredDVNs**: List of mandatory DVN addresses (e.g., LZ Labs).
-- **optionalDVNs**: List of optional DVNs (e.g., Google Cloud).
-- **optionalDVNThreshold**: Minimum number of optional signatures required.
-
-</details>
-
-### 4. Receiver Token Setup
-
-Since `ReceiverBridgeOApp` transfers existing tokens, it must be funded and authorized.
+Since `ReceiverBridgeOApp` is on Base, it must be funded with Base ITX tokens.
 
 ```bash
-# RECEIVER_OAPP: Deployed ReceiverBridgeOApp address on L1
-# ITX_TOKEN: Ethereum old ITX token address
-# MINTER_ROLE: abi.encodePacked("MINTER_ROLE")
-# AMOUNT: Amount of ITX to transfer (e.g., 500000000000000000000000 for 500,000 ITX)
+# RECEIVER_OAPP: Deployed ReceiverBridgeOApp address on Base
+# ITX_TOKEN: Base ITX token address
+# AMOUNT: Amount of ITX to transfer
 
-# 1. Grant MINTER_ROLE (if required by token logic)
-cast send <ITX_TOKEN> "grantRole(bytes32,address)" <MINTER_ROLE> <RECEIVER_OAPP> --rpc-url <ETH_RPC> --private-key $PRIVATE_KEY
-
-# 2. Fund the Receiver
-cast send <ITX_TOKEN> "transfer(address,uint256)" <RECEIVER_OAPP> <AMOUNT> --rpc-url <ETH_RPC> --private-key $PRIVATE_KEY
+# Fund the Receiver
+cast send <ITX_TOKEN> "transfer(address,uint256)" <RECEIVER_OAPP> <AMOUNT> --rpc-url <BASE_RPC> --private-key $PRIVATE_KEY
 ```
 
 ## 💻 Usage
 
-### Bridge Tokens (L2 -> L1)
+### Bridge Tokens (Ethereum/Scroll -> Base)
 
-1.  **Quote Fee**: Check the ETH fee required for the transaction.
+1.  **Quote Fee**: Check the Native fee required.
     ```bash
-    # SENDER_OAPP: Deployed SenderBridgeOApp address on L2
-    # USER: User's wallet address initiating the bridge
-    cast call <SENDER_OAPP> "quoteBridge()(uint256 nativeFee, uint256 zroFee)" --from <USER> --rpc-url <L2_RPC>
+    # Run on Source Chain (Ethereum or Scroll)
+    cast call <SENDER_OAPP> "quoteBridge()(uint256 nativeFee, uint256 zroFee)" --from <USER> --rpc-url <SOURCE_RPC>
     ```
 
 2.  **Execute Bridge**: Send tokens.
     ```bash
-    # SENDER_OAPP: Deployed SenderBridgeOApp address on L2
-    # RECIPIENT: Desired recipient address on L1 (Ethereum)
-    # NATIVE_FEE: Fee obtained from quoteBridge()
-    # USER_KEY: Private key of the user initiating the bridge
-    cast send <SENDER_OAPP> "bridgeTo(address)" <RECIPIENT> --value <NATIVE_FEE> --rpc-url <L2_RPC> --private-key <USER_KEY>
+    # Run on Source Chain (Ethereum or Scroll)
+    cast send <SENDER_OAPP> "bridgeTo(address)" <RECIPIENT> --value <NATIVE_FEE> --rpc-url <SOURCE_RPC> --private-key <USER_KEY>
     ```
 
 ## 🛠 Development Commands
@@ -184,13 +148,3 @@ forge fmt
 npm i
 npm run lint:fix
 ```
-
-
-# Note for AI Clients
-When modifying or adding files, you MUST run the following commands to ensure code quality and formatting standards.
-If any warnings or errors occur, you MUST fix them before proceeding.
-
-```bash
-forge fmt
-npm run lint:fix
-``` 

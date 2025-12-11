@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.31;
 
 import {Test} from "forge-std/Test.sol";
 import {SenderBridgeOApp} from "../src/SenderBridgeOApp.sol";
@@ -50,39 +50,45 @@ contract MockINTMAXToken is IERC20 {
 /**
  * @title Integration Tests
  * @notice End-to-end integration tests for the complete bridge system
+ * @dev Scenario: User bridges from Ethereum/Scroll (Source) to Base (Dest)
  */
 contract IntegrationTest is Test {
     SenderBridgeOApp public senderBridge;
     ReceiverBridgeOApp public receiverBridge;
-    MockINTMAXToken public baseToken;
-    MockINTMAXToken public mainnetToken;
-    MockEndpointV2 public baseEndpoint;
-    MockEndpointV2 public mainnetEndpoint;
+    MockINTMAXToken public sourceToken; // e.g., Ethereum
+    MockINTMAXToken public destToken; // e.g., Base
+    MockEndpointV2 public sourceEndpoint;
+    MockEndpointV2 public destEndpoint;
 
     address public owner = address(0x1);
     address public user = address(0x2);
     address public recipient = address(0x3);
 
-    uint32 public constant BASE_EID = 84532;
-    uint32 public constant MAINNET_EID = 11155111;
+    uint32 public constant SOURCE_EID = 101; // Ethereum EID
+    uint32 public constant DEST_EID = 102; // Base EID
 
     function setUp() public {
-        baseToken = new MockINTMAXToken();
-        mainnetToken = new MockINTMAXToken();
-        baseEndpoint = new MockEndpointV2(BASE_EID);
-        mainnetEndpoint = new MockEndpointV2(MAINNET_EID);
+        sourceToken = new MockINTMAXToken();
+        destToken = new MockINTMAXToken();
+        sourceEndpoint = new MockEndpointV2(SOURCE_EID);
+        destEndpoint = new MockEndpointV2(DEST_EID);
 
         _deploySenderBridge();
         _deployReceiverBridge();
         _setupPeers();
 
-        baseToken.setBalance(user, 1000 * 1e18);
-        mainnetToken.setBalance(address(receiverBridge), 10000 * 1e18);
+        // User starts with tokens on Source chain
+        sourceToken.setBalance(user, 1000 * 1e18);
+
+        // Receiver bridge holds tokens on Dest chain
+        destToken.setBalance(address(receiverBridge), 10000 * 1e18);
+
         vm.deal(user, 10 ether);
     }
 
     function _deploySenderBridge() internal {
-        SenderBridgeOApp senderImpl = new SenderBridgeOApp(address(baseEndpoint), address(baseToken), MAINNET_EID);
+        // Deploy Sender on Source Chain, pointing to Dest Chain EID
+        SenderBridgeOApp senderImpl = new SenderBridgeOApp(address(sourceEndpoint), address(sourceToken), DEST_EID);
         ERC1967Proxy senderProxy = new ERC1967Proxy(address(senderImpl), "");
         senderBridge = SenderBridgeOApp(address(senderProxy));
 
@@ -91,21 +97,25 @@ contract IntegrationTest is Test {
     }
 
     function _deployReceiverBridge() internal {
-        receiverBridge = new ReceiverBridgeOApp(address(mainnetEndpoint), owner, owner, address(mainnetToken));
+        // Deploy Receiver on Dest Chain
+        receiverBridge = new ReceiverBridgeOApp(address(destEndpoint), owner, owner, address(destToken));
     }
 
     function _setupPeers() internal {
-        bytes32 peer = bytes32(uint256(uint160(address(receiverBridge))));
-        uint32 dstEid = senderBridge.DST_EID();
-        vm.prank(senderBridge.owner());
-        senderBridge.setPeer(dstEid, peer);
+        bytes32 receiverPeer = bytes32(uint256(uint160(address(receiverBridge))));
+        bytes32 senderPeer = bytes32(uint256(uint160(address(senderBridge))));
 
+        // Sender (Source) -> Receiver (Dest)
+        vm.prank(senderBridge.owner());
+        senderBridge.setPeer(DEST_EID, receiverPeer);
+
+        // Receiver (Dest) -> Sender (Source)
         vm.prank(owner);
-        receiverBridge.setPeer(BASE_EID, bytes32(uint256(uint160(address(senderBridge)))));
+        receiverBridge.setPeer(SOURCE_EID, senderPeer);
     }
 
     function test_EndToEndBridgeFlow() public {
-        // 1. User bridges tokens from Base to Mainnet
+        // 1. User bridges tokens from Source to Dest
         vm.prank(user);
         MessagingFee memory fee = senderBridge.quoteBridge();
 
@@ -114,17 +124,17 @@ contract IntegrationTest is Test {
 
         assertEq(senderBridge.bridgedAmount(user), 1000 * 1e18);
 
-        // 3. Simulate LayerZero message delivery
+        // 2. Simulate LayerZero message delivery
         bytes memory payload = abi.encode(recipient, 1000 * 1e18, user);
-        Origin memory origin = Origin(BASE_EID, bytes32(uint256(uint160(address(senderBridge)))), 1);
+        Origin memory origin = Origin(SOURCE_EID, bytes32(uint256(uint160(address(senderBridge)))), 1);
 
-        // 4. Verify mainnet side receives and processes message
-        uint256 recipientBalanceBefore = mainnetToken.balanceOf(recipient);
+        // 3. Verify Dest side receives and processes message
+        uint256 recipientBalanceBefore = destToken.balanceOf(recipient);
 
-        vm.prank(address(mainnetEndpoint));
+        vm.prank(address(destEndpoint));
         receiverBridge.lzReceive(origin, bytes32(0), payload, address(0), "");
 
-        assertEq(mainnetToken.balanceOf(recipient), recipientBalanceBefore + 1000 * 1e18);
+        assertEq(destToken.balanceOf(recipient), recipientBalanceBefore + 1000 * 1e18);
     }
 
     function test_MultipleBridgeOperations() public {
@@ -132,8 +142,8 @@ contract IntegrationTest is Test {
         senderBridge.bridgeTo{value: 0.01 ether}(recipient);
         assertEq(senderBridge.bridgedAmount(user), 1000 * 1e18);
 
-        // Increase user balance
-        baseToken.setBalance(user, 1500 * 1e18);
+        // Increase user balance on Source
+        sourceToken.setBalance(user, 1500 * 1e18);
 
         // Second bridge (partial amount)
         vm.prank(user);
@@ -144,28 +154,28 @@ contract IntegrationTest is Test {
     function test_CrossChainErrorRecovery() public {
         // Setup a scenario where message execution fails
         bytes memory payload = abi.encode(address(0), 1000 * 1e18, user); // Invalid recipient
-        Origin memory origin = Origin(BASE_EID, bytes32(uint256(uint160(address(senderBridge)))), 1);
+        Origin memory origin = Origin(SOURCE_EID, bytes32(uint256(uint160(address(senderBridge)))), 1);
 
-        // Simulate stored payload scenario
+        // Simulate stored payload scenario on Dest
         vm.expectRevert(IReceiverBridgeOApp.RecipientZero.selector);
-        vm.prank(address(mainnetEndpoint));
+        vm.prank(address(destEndpoint));
         receiverBridge.lzReceive(origin, bytes32(0), payload, address(0), "");
 
         // Test manual retry with corrected payload
         bytes memory correctedPayload = abi.encode(recipient, 1000 * 1e18, user);
         receiverBridge.manualRetry(origin, bytes32(0), correctedPayload, "");
 
-        assertEq(mainnetToken.balanceOf(recipient), 1000 * 1e18);
+        assertEq(destToken.balanceOf(recipient), 1000 * 1e18);
     }
 
     function test_OwnershipTransferFlow() public {
         address newOwner = address(0x999);
 
-        // Transfer BaseBridge ownership
+        // Transfer Sender ownership
         vm.prank(owner);
         senderBridge.transferOwnership(newOwner);
 
-        // Transfer MainnetBridge ownership
+        // Transfer Receiver ownership
         vm.prank(owner);
         receiverBridge.transferOwnership(newOwner);
 
