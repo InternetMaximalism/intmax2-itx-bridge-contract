@@ -11,7 +11,9 @@ out/
 docs/
 
 # Dotenv file
+.env_bkup*
 .env
+
 
 node_modules/
 broadcast/

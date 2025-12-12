@@ -10,30 +10,26 @@ contract ConfigureSenderOApp is Script {
     uint32 internal constant CONFIG_TYPE_ULN = 2;
 
     function run() external {
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-
         // Load environment variables for the specific chain
         address senderOappAddress = vm.envAddress("SENDER_OAPP");
         address endpoint = vm.envAddress("ENDPOINT");
         address dvn = vm.envAddress("DVN");
         uint32 dstEid = uint32(vm.envUint("DST_EID"));
+        setupConfig(endpoint, senderOappAddress, dstEid, dvn);
+    }
 
-        console.log("Configuring Sender OApp:", senderOappAddress);
-        console.log("Endpoint:", endpoint);
-        console.log("Destination EID:", dstEid);
-
+    function setupConfig(address _endpoint, address _oapp, uint32 _dstEid, address _dvn) public {
+        console.log("Configuring Sender OApp:", _oapp);
+        console.log("Endpoint:", _endpoint);
+        console.log("Destination EID:", _dstEid);
+        console.log("DVN:", _dvn);
+        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
-
-        // Get the Send Library
-        address sendLib = ILayerZeroEndpointV2(endpoint).getSendLibrary(senderOappAddress, dstEid);
+        address sendLib = ILayerZeroEndpointV2(_endpoint).getSendLibrary(_oapp, _dstEid);
         console.log("Send Library:", sendLib);
-
-        // Prepare DVN configuration
         address[] memory requiredDVNs = new address[](1);
-        requiredDVNs[0] = dvn;
-
+        requiredDVNs[0] = _dvn;
         address[] memory optionalDVNs = new address[](0);
-
         UlnConfig memory ulnConfig = UlnConfig({
             confirmations: 15,
             requiredDVNCount: 1,
@@ -42,16 +38,11 @@ contract ConfigureSenderOApp is Script {
             requiredDVNs: requiredDVNs,
             optionalDVNs: optionalDVNs
         });
-
         bytes memory configData = abi.encode(ulnConfig);
-
         SetConfigParam[] memory params = new SetConfigParam[](1);
-        params[0] = SetConfigParam({eid: dstEid, configType: CONFIG_TYPE_ULN, config: configData});
-
-        // Set Config
-        ILayerZeroEndpointV2(endpoint).setConfig(senderOappAddress, sendLib, params);
+        params[0] = SetConfigParam({eid: _dstEid, configType: CONFIG_TYPE_ULN, config: configData});
+        ILayerZeroEndpointV2(_endpoint).setConfig(_oapp, sendLib, params);
         console.log("DVN Config set for Sender OApp.");
-
         vm.stopBroadcast();
     }
 }
