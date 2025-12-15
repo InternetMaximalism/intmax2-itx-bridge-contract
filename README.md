@@ -71,7 +71,7 @@ This command will:
 6.  Fund the Receiver with ITX tokens on Base.
 
 ```bash
-forge script script/DeployAndAllSetupMainnet.s.sol:DeployAndAllSetupMainnet --broadcast --verify
+forge script script/DeployAndAllSetupMainnet.s.sol:DeployAndAllSetupMainnet --broadcast --verify --etherscan-api-key $ETHERSCAN_API_KEY
 ```
 
 > **Note:** The script switches chains automatically. Ensure your `PRIVATE_KEY` has ETH for gas on all three chains.

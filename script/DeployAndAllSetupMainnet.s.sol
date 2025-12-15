@@ -13,6 +13,7 @@ import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol"
 // forge script script/DeployAllMainnet.s.sol:DeployAllMainnet --broadcast --verify
 contract DeployAndAllSetupMainnet is Script {
     using SafeERC20 for IERC20;
+
     // solhint-disable-next-line state-visibility
     uint32 constant BASE_EID = 30184;
     // solhint-disable-next-line state-visibility
@@ -34,7 +35,17 @@ contract DeployAndAllSetupMainnet is Script {
     // solhint-disable-next-line state-visibility
     address constant BASE_LAYER_ZERO_DVN = 0x9e059a54699a285714207b43B055483E78FAac25;
 
+    // Fork IDs
+    uint256 private scrollFork;
+    uint256 private ethFork;
+    uint256 private baseFork;
+
     function run() external {
+        // Create forks
+        scrollFork = vm.createFork("scroll");
+        ethFork = vm.createFork("ethereum");
+        baseFork = vm.createFork("base");
+
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(deployerPrivateKey);
         console.log("Deployer Address:", deployer);
@@ -42,12 +53,16 @@ contract DeployAndAllSetupMainnet is Script {
         address scrollSender = deployScrollSender();
         address ethSender = deployEthereumSender();
         address baseReceiver = deployBaseReceiver();
-        setSenderPeer("scroll", scrollSender, baseReceiver);
-        setSenderPeer("ethereum", ethSender, baseReceiver);
+
+        setSenderPeer(scrollFork, scrollSender, baseReceiver);
+        setSenderPeer(ethFork, ethSender, baseReceiver);
+
         setReceiverPeer(SCROLL_EID, baseReceiver, scrollSender);
         setReceiverPeer(ETHEREUM_EID, baseReceiver, ethSender);
-        setupSenderConfig("scroll", SCROLL_ENDPOINT, scrollSender, BASE_EID, SCROLL_LAYER_ZERO_DVN);
-        setupSenderConfig("ethereum", ETHEREUM_ENDPOINT, ethSender, BASE_EID, ETHEREUM_LAYER_ZERO_DVN);
+
+        setupSenderConfig(scrollFork, SCROLL_ENDPOINT, scrollSender, BASE_EID, SCROLL_LAYER_ZERO_DVN);
+        setupSenderConfig(ethFork, ETHEREUM_ENDPOINT, ethSender, BASE_EID, ETHEREUM_LAYER_ZERO_DVN);
+
         setupReceiverConfig(BASE_ENDPOINT, baseReceiver, SCROLL_EID, BASE_LAYER_ZERO_DVN);
         setupReceiverConfig(BASE_ENDPOINT, baseReceiver, ETHEREUM_EID, BASE_LAYER_ZERO_DVN);
 
@@ -55,31 +70,21 @@ contract DeployAndAllSetupMainnet is Script {
     }
 
     function setupReceiverConfig(address endpoint, address receiverAddress, uint32 srcEid, address dvn) private {
-        vm.createSelectFork("base");
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        vm.startBroadcast(deployerPrivateKey);
+        vm.selectFork(baseFork);
         ConfigureReceiverOApp configureReceiver = new ConfigureReceiverOApp();
         configureReceiver.setupConfig(endpoint, receiverAddress, srcEid, dvn);
-        vm.stopBroadcast();
     }
 
-    function setupSenderConfig(
-        string memory chainName,
-        address endpoint,
-        address senderAddress,
-        uint32 dstEid,
-        address dvn
-    ) private {
-        vm.createSelectFork(chainName);
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        vm.startBroadcast(deployerPrivateKey);
+    function setupSenderConfig(uint256 forkId, address endpoint, address senderAddress, uint32 dstEid, address dvn)
+        private
+    {
+        vm.selectFork(forkId);
         ConfigureSenderOApp configureSender = new ConfigureSenderOApp();
         configureSender.setupConfig(endpoint, senderAddress, dstEid, dvn);
-        vm.stopBroadcast();
     }
 
     function prepareBaseToken(address receiverAddress) private {
-        vm.createSelectFork("base");
+        vm.selectFork(baseFork);
         uint256 adminPrivateKey = vm.envUint("BASE_OLD_TOKEN_ADMIN_PRIVATE_KEY");
         vm.startBroadcast(adminPrivateKey);
         IAccessControl accessControl = IAccessControl(vm.envAddress("BASE_OLD_TOKEN"));
@@ -94,25 +99,27 @@ contract DeployAndAllSetupMainnet is Script {
     }
 
     function setReceiverPeer(uint32 senderEid, address receiverAddress, address senderAddress) private {
-        vm.createSelectFork("base");
+        vm.selectFork(baseFork);
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
         ReceiverBridgeOApp receiver = ReceiverBridgeOApp(receiverAddress);
         receiver.setPeer(senderEid, bytes32(uint256(uint160(senderAddress))));
         vm.stopBroadcast();
+        console.log("set receiver peer for eid:", senderEid);
     }
 
-    function setSenderPeer(string memory chainName, address senderAddress, address baseReceiver) private {
-        vm.createSelectFork(chainName);
+    function setSenderPeer(uint256 forkId, address senderAddress, address baseReceiver) private {
+        vm.selectFork(forkId);
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
         SenderBridgeOApp sender = SenderBridgeOApp(senderAddress);
         sender.setPeer(BASE_EID, bytes32(uint256(uint160(baseReceiver))));
         vm.stopBroadcast();
+        console.log("set sender peer on fork:", forkId);
     }
 
     function deployScrollSender() private returns (address) {
-        vm.createSelectFork("scroll");
+        vm.selectFork(scrollFork);
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
         DeploySenderBridge deploySender = new DeploySenderBridge();
@@ -128,7 +135,7 @@ contract DeployAndAllSetupMainnet is Script {
     }
 
     function deployEthereumSender() private returns (address) {
-        vm.createSelectFork("ethereum");
+        vm.selectFork(ethFork);
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
         DeploySenderBridge deploySender = new DeploySenderBridge();
@@ -144,7 +151,7 @@ contract DeployAndAllSetupMainnet is Script {
     }
 
     function deployBaseReceiver() private returns (address) {
-        vm.createSelectFork("base");
+        vm.selectFork(baseFork);
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
         DeployReceiverBridge deployReceiver = new DeployReceiverBridge();

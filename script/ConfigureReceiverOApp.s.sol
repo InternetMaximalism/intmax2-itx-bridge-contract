@@ -16,7 +16,6 @@ contract ConfigureReceiverOApp is Script {
         address dvn = vm.envAddress("DVN");
         uint32 srcEid = uint32(vm.envUint("SRC_EID"));
         vm.startBroadcast(deployerPrivateKey);
-
         // Configure DVN for Ethereum -> Base
         setupConfig(baseEndPoint, receiverAddress, srcEid, dvn);
         vm.stopBroadcast();
@@ -51,8 +50,10 @@ contract ConfigureReceiverOApp is Script {
 
         SetConfigParam[] memory params = new SetConfigParam[](1);
         params[0] = SetConfigParam({eid: _srcEid, configType: CONFIG_TYPE_ULN, config: configData});
-
+        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        vm.startBroadcast(deployerPrivateKey);
         ILayerZeroEndpointV2(_endpoint).setConfig(_oapp, receiveLib, params);
+        vm.stopBroadcast();
         console.log("DVN Configured for Source EID:", _srcEid);
     }
 }

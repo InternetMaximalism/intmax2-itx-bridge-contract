@@ -18,6 +18,6 @@ remappings = [
 solc = "0.8.31"
 
 [rpc_endpoints]
-ethereum = "https://0xrpc.io/eth"
-base = "https://base.meowrpc.com"
-scroll = "https://scroll.drpc.org"
+ethereum = "https://eth.llamarpc.com"
+base = "https://mainnet.base.org"
+scroll = "https://rpc.scroll.io"
