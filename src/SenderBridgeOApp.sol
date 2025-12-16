@@ -35,7 +35,7 @@ contract SenderBridgeOApp is
 
     // keccak256(abi.encode(uint256(keccak256("intmax2-itx-bridge-contract.storage.SenderBridgeOApp")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant SENDER_BRIDGE_OAPP_STORAGE_LOCATION =
-        0x0c954070df3306917f16f584e0220268582d774266395e5c707d72c83690d900;
+        0xfc9baf85f941428a20b85d2a866e8a37b69970d9f5c3455eed42ca3379599c00;
 
     function _getSenderBridgeOAppStorage() internal pure returns (SenderBridgeOAppStorage storage $) {
         /* solhint-disable no-inline-assembly */
