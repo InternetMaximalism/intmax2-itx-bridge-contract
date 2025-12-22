@@ -126,7 +126,8 @@ contract IntegrationTest is Test {
 
         // 2. Simulate LayerZero message delivery
         bytes memory payload = abi.encode(recipient, 1000 * 1e18, user);
-        Origin memory origin = Origin(SOURCE_EID, bytes32(uint256(uint160(address(senderBridge)))), 1);
+        Origin memory origin =
+            Origin({srcEid: SOURCE_EID, sender: bytes32(uint256(uint160(address(senderBridge)))), nonce: 1});
 
         // 3. Verify Dest side receives and processes message
         uint256 recipientBalanceBefore = destToken.balanceOf(recipient);
@@ -154,7 +155,8 @@ contract IntegrationTest is Test {
     function test_CrossChainErrorRecovery() public {
         // Setup a scenario where message execution fails
         bytes memory payload = abi.encode(address(0), 1000 * 1e18, user); // Invalid recipient
-        Origin memory origin = Origin(SOURCE_EID, bytes32(uint256(uint160(address(senderBridge)))), 1);
+        Origin memory origin =
+            Origin({srcEid: SOURCE_EID, sender: bytes32(uint256(uint160(address(senderBridge)))), nonce: 1});
 
         // Simulate stored payload scenario on Dest
         vm.expectRevert(IReceiverBridgeOApp.RecipientZero.selector);

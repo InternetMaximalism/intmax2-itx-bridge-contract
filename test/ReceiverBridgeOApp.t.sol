@@ -137,7 +137,7 @@ contract MockINTMAXToken is IERC20 {
 
 contract ReceiverBridgeOAppTest is Test {
     ReceiverBridgeOApp public receiverBridge;
-    MockINTMAXToken public INTMAX;
+    MockINTMAXToken public intmax;
     MockEndpointV2 public mockEndpoint;
     address public owner = address(0x1);
     address public srcUser = address(0x2);
@@ -146,7 +146,7 @@ contract ReceiverBridgeOAppTest is Test {
     bytes32 public srcSender;
 
     function setUp() public {
-        INTMAX = new MockINTMAXToken();
+        intmax = new MockINTMAXToken();
         srcSender = bytes32(uint256(uint160(address(0x4)))); // Mock Base OApp address
         mockEndpoint = new MockEndpointV2(2); // Mainnet EID
 
@@ -154,7 +154,7 @@ contract ReceiverBridgeOAppTest is Test {
             address(mockEndpoint), // endpoint
             owner, // delegate
             owner, // owner
-            address(INTMAX) // token
+            address(intmax) // token
         );
 
         // Set peer so OAppCore._getPeerOrRevert won't revert during tests
@@ -166,18 +166,18 @@ contract ReceiverBridgeOAppTest is Test {
         receiverBridge.setPeer(999, srcSender);
 
         // Set balance for mainnet bridge for distribution
-        INTMAX.setBalance(address(receiverBridge), 10000 * 1e18);
+        intmax.setBalance(address(receiverBridge), 10000 * 1e18);
     }
 
     function test_LzReceiveSuccess() public {
         uint256 amount = 100 * 1e18;
         bytes memory payload = abi.encode(recipient, amount, srcUser);
 
-        uint256 recipientBalanceBefore = INTMAX.balanceOf(recipient);
+        uint256 recipientBalanceBefore = intmax.balanceOf(recipient);
 
         mockEndpoint.lzReceive(payable(address(receiverBridge)), SRC_EID, srcSender, 1, bytes32(0), payload, bytes(""));
 
-        uint256 recipientBalanceAfter = INTMAX.balanceOf(recipient);
+        uint256 recipientBalanceAfter = intmax.balanceOf(recipient);
         assertEq(recipientBalanceAfter - recipientBalanceBefore, amount);
     }
 
@@ -196,11 +196,11 @@ contract ReceiverBridgeOAppTest is Test {
         bytes32 guid = bytes32(uint256(1));
         bytes memory extraData = bytes("");
 
-        uint256 recipientBalanceBefore = INTMAX.balanceOf(recipient);
+        uint256 recipientBalanceBefore = intmax.balanceOf(recipient);
 
         receiverBridge.manualRetry(origin, guid, message, extraData);
 
-        uint256 recipientBalanceAfter = INTMAX.balanceOf(recipient);
+        uint256 recipientBalanceAfter = intmax.balanceOf(recipient);
         assertEq(recipientBalanceAfter - recipientBalanceBefore, amount);
     }
 
@@ -243,16 +243,16 @@ contract ReceiverBridgeOAppTest is Test {
         uint256 amount = 1000 * 1e18;
         address to = address(0x5);
 
-        uint256 toBalanceBefore = INTMAX.balanceOf(to);
-        uint256 contractBalanceBefore = INTMAX.balanceOf(address(receiverBridge));
+        uint256 toBalanceBefore = intmax.balanceOf(to);
+        uint256 contractBalanceBefore = intmax.balanceOf(address(receiverBridge));
 
         vm.prank(owner);
         vm.expectEmit(true, false, false, true);
         emit IReceiverBridgeOApp.TokensWithdrawn(to, amount);
         receiverBridge.withdrawTokens(to, amount);
 
-        uint256 toBalanceAfter = INTMAX.balanceOf(to);
-        uint256 contractBalanceAfter = INTMAX.balanceOf(address(receiverBridge));
+        uint256 toBalanceAfter = intmax.balanceOf(to);
+        uint256 contractBalanceAfter = intmax.balanceOf(address(receiverBridge));
 
         assertEq(toBalanceAfter - toBalanceBefore, amount);
         assertEq(contractBalanceBefore - contractBalanceAfter, amount);

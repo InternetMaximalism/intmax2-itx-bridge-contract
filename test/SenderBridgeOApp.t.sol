@@ -44,7 +44,7 @@ contract MockINTMAXToken is IERC20 {
 
 contract SenderBridgeOAppTest is Test {
     SenderBridgeOApp public senderBridge;
-    MockINTMAXToken public INTMAX;
+    MockINTMAXToken public intmax;
     MockEndpointV2 public endpoint;
     address public owner = address(0x1);
     address public user = address(0x2);
@@ -52,13 +52,13 @@ contract SenderBridgeOAppTest is Test {
     uint32 public constant DST_EID = 30101; // Ethereum Mainnet
 
     function setUp() public {
-        INTMAX = new MockINTMAXToken();
+        intmax = new MockINTMAXToken();
         endpoint = new MockEndpointV2(1); // Base chain EID
 
         // Deploy Implementation
         SenderBridgeOApp implementation = new SenderBridgeOApp(
             address(endpoint),
-            address(INTMAX), // TOKEN
+            address(intmax), // TOKEN
             DST_EID
         );
 
@@ -83,7 +83,7 @@ contract SenderBridgeOAppTest is Test {
         vm.prank(senderBridge.owner()); // Add vm.prank again for setPeer, using reported owner
         senderBridge.setPeer(dstEid, peer);
 
-        INTMAX.setBalance(user, 1000 * 1e18);
+        intmax.setBalance(user, 1000 * 1e18);
         vm.deal(user, 10 ether);
     }
 
@@ -148,7 +148,7 @@ contract SenderBridgeOAppTest is Test {
         vm.prank(user);
         senderBridge.bridgeTo{value: 0.01 ether}(recipient);
 
-        INTMAX.setBalance(user, 500 * 1e18);
+        intmax.setBalance(user, 500 * 1e18);
 
         vm.prank(user);
         vm.expectRevert(ISenderBridgeOApp.BalanceLessThanBridged.selector);
@@ -159,7 +159,7 @@ contract SenderBridgeOAppTest is Test {
         vm.prank(user);
         senderBridge.bridgeTo{value: 0.01 ether}(recipient);
 
-        INTMAX.setBalance(user, 1500 * 1e18);
+        intmax.setBalance(user, 1500 * 1e18);
 
         vm.prank(user);
 
@@ -195,7 +195,7 @@ contract SenderBridgeOAppTest is Test {
     }
 
     function test_QuoteBridgeRevertNoDelta() public {
-        INTMAX.setBalance(user, 0); // No tokens
+        intmax.setBalance(user, 0); // No tokens
         vm.prank(user);
         vm.expectRevert(ISenderBridgeOApp.BalanceLessThanBridged.selector); // 0 <= 0 fails current > prev check
         senderBridge.quoteBridge();
@@ -218,7 +218,7 @@ contract SenderBridgeOAppTest is Test {
         senderBridge.bridgeTo{value: 0.01 ether}(recipient);
 
         // Then reduce balance below bridged amount
-        INTMAX.setBalance(user, 500 * 1e18);
+        intmax.setBalance(user, 500 * 1e18);
 
         vm.prank(user);
         vm.expectRevert(ISenderBridgeOApp.BalanceLessThanBridged.selector);
@@ -317,7 +317,7 @@ contract SenderBridgeOAppTest is Test {
 
     function test_UpgradeTo() public {
         // Deploy V2 implementation
-        SenderBridgeOAppV2 v2Impl = new SenderBridgeOAppV2(address(endpoint), address(INTMAX), DST_EID);
+        SenderBridgeOAppV2 v2Impl = new SenderBridgeOAppV2(address(endpoint), address(intmax), DST_EID);
 
         // Upgrade to V2
         vm.prank(owner);
