@@ -45,24 +45,24 @@ interface IReceiverBridgeOApp {
 
     /**
      * @notice Manually retry a failed LayerZero message
-     * @param _origin The origin information of the message
-     * @param _guid The globally unique identifier of the message
-     * @param _message The message payload
-     * @param _extraData Additional data for the retry
+     * @param origin The origin information of the message
+     * @param guid The globally unique identifier of the message
+     * @param message The message payload
+     * @param extraData Additional data for the retry
      * @dev Used when a message fails to execute and needs manual intervention
      */
-    function manualRetry(Origin calldata _origin, bytes32 _guid, bytes calldata _message, bytes calldata _extraData)
+    function manualRetry(Origin calldata origin, bytes32 guid, bytes calldata message, bytes calldata extraData)
         external;
 
     /**
      * @notice Clear a stuck LayerZero message (owner only)
-     * @param _origin The origin information of the message
-     * @param _guid The globally unique identifier of the message
-     * @param _message The message payload to clear
+     * @param origin The origin information of the message
+     * @param guid The globally unique identifier of the message
+     * @param message The message payload to clear
      * @dev Only callable by contract owner
      * @dev Used to clear messages that cannot be retried and need to be skipped
      */
-    function clearMessage(Origin calldata _origin, bytes32 _guid, bytes calldata _message) external;
+    function clearMessage(Origin calldata origin, bytes32 guid, bytes calldata message) external;
 
     /**
      * @notice Check if a payload is stored on the LayerZero endpoint

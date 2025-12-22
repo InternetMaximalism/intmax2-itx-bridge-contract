@@ -7,7 +7,7 @@ At the start of a session, please read this file to understand the project scope
 - **Name:** Intmax2 ITX Bridge Contract
 - **Purpose:** A token bridge from Ethereum/Scroll (Source) to Base (Destination) using LayerZero v2.
 - **Core Mechanism:** **"Proof of Holding"**. Unlike traditional Lock & Mint or Burn & Mint bridges, the Sender contract on the source chain calculates the "Delta" (increase in user balance since last bridge) and sends a message to Base. No burning or locking occurs on the source chain.
-- **Stack:** Solidity 0.8.31, Foundry, LayerZero v2 (OApp), OpenZeppelin Upgradeable.
+- **Stack:** Solidity 0.8.33, Foundry, LayerZero v2 (OApp), OpenZeppelin Upgradeable.
 
 ## 2. Architecture & Key Files
 - **`src/SenderBridgeOApp.sol` (Source: Ethereum/Scroll):**
@@ -22,10 +22,10 @@ At the start of a session, please read this file to understand the project scope
 - **`test/Integration.t.sol`:**
   - End-to-end integration tests using MockEndpointV2.
 - **`foundry.toml`:**
-  - Configuration file. Explicitly sets `solc = "0.8.31"`.
+  - Configuration file. Explicitly sets `solc = "0.8.33"`.
 
 ## 3. Coding Standards & Constraints
-- **Solidity Version:** Strictly `0.8.31`.
+- **Solidity Version:** Strictly `0.8.33`.
 - **Storage Layout (Critical):**
   - Do **NOT** use the Solidity 0.8.29+ `layout at` syntax in `SenderBridgeOApp`. It causes inheritance issues with test mocks.
   - Maintain the existing **Unstructured Storage** pattern using `struct SenderBridgeOAppStorage` and assembly slot management.
@@ -45,8 +45,8 @@ When asked to modify code, follow this strict cycle:
 5.  **Format:** Run `forge fmt` or `yes | npm run lint:fix` to ensure code style consistency.
 
 ## 5. Known Issues & Notes
-- **Forge-std Warnings:** You may see numerous "Natspec memory-safe-assembly" warnings from `lib/forge-std`. These are external library issues and can be ignored.
-- **Compiler Version:** If checksum mismatches occur for solc 0.8.31, ensure `foundryup` has been run to install the latest nightly build.
+- **Forge-std Warnings:** You may see numerous Solc warnings from dependencies (e.g. `lib/forge-std`); this repo ignores common warning codes via `foundry.toml` (`ignored_error_codes`).
+- **Compiler Version:** If checksum/version mismatches occur for solc 0.8.33, ensure your Foundry installation has the configured compiler available (e.g. run `foundryup`).
 
 ---
 **Language:** While this file is in English, please interact with the user in **Japanese** unless requested otherwise.

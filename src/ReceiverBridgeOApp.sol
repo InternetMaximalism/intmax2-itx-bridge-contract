@@ -12,13 +12,14 @@ import {IReceiverBridgeOApp} from "./interfaces/IReceiverBridgeOApp.sol";
 contract ReceiverBridgeOApp is OAppReceiver, IReceiverBridgeOApp {
     using SafeERC20 for IERC20;
 
-    IERC20 private immutable _TOKEN;
+    // slither-disable-next-line naming-convention
+    IERC20 private immutable TOKEN;
 
-    constructor(address _endpoint, address _delegate, address _owner, address _token)
-        OAppCore(_endpoint, _delegate)
-        Ownable(_owner)
+    constructor(address endpoint, address delegate, address owner, address token)
+        OAppCore(endpoint, delegate)
+        Ownable(owner)
     {
-        _TOKEN = IERC20(_token);
+        TOKEN = IERC20(token);
     }
 
     // Implement OAppReceiver internal hook and forward to mockLzReceive for testing.
@@ -38,25 +39,25 @@ contract ReceiverBridgeOApp is OAppReceiver, IReceiverBridgeOApp {
 
         require(recipient != address(0), RecipientZero());
 
-        _TOKEN.safeTransfer(recipient, amount);
+        TOKEN.safeTransfer(recipient, amount);
         emit BridgeFulfilled(srcUser, recipient, amount);
     }
 
     // Not payable because the _lzReceive function does not handle eth
-    function manualRetry(Origin calldata _origin, bytes32 _guid, bytes calldata _message, bytes calldata _extraData)
+    function manualRetry(Origin calldata origin, bytes32 guid, bytes calldata message, bytes calldata extraData)
         external
     {
-        endpoint.lzReceive(_origin, address(this), _guid, _message, _extraData);
+        endpoint.lzReceive(origin, address(this), guid, message, extraData);
     }
 
-    function clearMessage(Origin calldata _origin, bytes32 _guid, bytes calldata _message) external onlyOwner {
-        endpoint.clear(address(this), _origin, _guid, _message);
+    function clearMessage(Origin calldata origin, bytes32 guid, bytes calldata message) external onlyOwner {
+        endpoint.clear(address(this), origin, guid, message);
     }
 
     function withdrawTokens(address to, uint256 amount) external onlyOwner {
         require(to != address(0), InvalidAddress());
         require(amount > 0, InvalidAmount());
-        _TOKEN.safeTransfer(to, amount);
+        TOKEN.safeTransfer(to, amount);
         emit TokensWithdrawn(to, amount);
     }
 
@@ -67,10 +68,13 @@ contract ReceiverBridgeOApp is OAppReceiver, IReceiverBridgeOApp {
     {
         bytes memory payload = abi.encodePacked(guid, message);
         bytes32 payloadHash;
-        // solhint-disable-next-line no-inline-assembly
+        /* solhint-disable no-inline-assembly */
+        // slither-disable-start assembly
         assembly ("memory-safe") {
             payloadHash := keccak256(add(payload, 0x20), mload(payload))
         }
+        // slither-disable-end assembly
+        /* solhint-enable no-inline-assembly */
         return endpoint.inboundPayloadHash(address(this), srcEid, sender, nonce) == payloadHash;
     }
 }

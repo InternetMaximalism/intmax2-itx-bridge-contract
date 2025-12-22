@@ -25,7 +25,9 @@ contract SenderBridgeOApp is
 {
     using SafeERC20 for IERC20;
 
+    // slither-disable-next-line naming-convention
     IERC20 public immutable TOKEN;
+    // slither-disable-next-line naming-convention
     uint32 public immutable DST_EID;
 
     struct SenderBridgeOAppStorage {
@@ -39,37 +41,34 @@ contract SenderBridgeOApp is
 
     function _getSenderBridgeOAppStorage() internal pure returns (SenderBridgeOAppStorage storage $) {
         /* solhint-disable no-inline-assembly */
+        // slither-disable-start assembly
         assembly {
             $.slot := SENDER_BRIDGE_OAPP_STORAGE_LOCATION
         }
+        // slither-disable-end assembly
         /* solhint-enable no-inline-assembly */
     }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(address _endpoint, address _token, uint32 _dstEid) OAppCoreUpgradeable(_endpoint) {
-        TOKEN = IERC20(_token);
-        DST_EID = _dstEid;
+    constructor(address endpoint, address token, uint32 dstEid) OAppCoreUpgradeable(endpoint) {
+        TOKEN = IERC20(token);
+        DST_EID = dstEid;
         _disableInitializers();
     }
 
-    function initialize(address _delegate, address _owner) public initializer {
-        __OAppSender_init(_delegate);
-        __Ownable_init(_owner);
+    function initialize(address delegate, address owner) public initializer {
+        __OAppSender_init(delegate);
+        __Ownable_init(owner);
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
 
         SenderBridgeOAppStorage storage $ = _getSenderBridgeOAppStorage();
-        $.gasLimit = 200000;
+        $.gasLimit = 200_000;
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
-    /**
-     * @notice Set the gas limit for LayerZero message execution on the destination chain
-     * @param _gasLimit The new gas limit value (must be greater than 0)
-     * @dev Only callable by contract owner
-     * @dev Emits GasLimitUpdated event
-     */
+    // slither-disable-next-line naming-convention
     function setGasLimit(uint128 _gasLimit) external onlyOwner {
         SenderBridgeOAppStorage storage $ = _getSenderBridgeOAppStorage();
         uint128 oldLimit = $.gasLimit;

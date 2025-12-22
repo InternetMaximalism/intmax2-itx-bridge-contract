@@ -1,7 +1,7 @@
 # INTMAX2 ITX Bridge Contract
 
 ![License](https://img.shields.io/badge/License-MIT-blue.svg)
-![Solidity](https://img.shields.io/badge/Solidity-0.8.31-363636.svg)
+![Solidity](https://img.shields.io/badge/Solidity-0.8.33-363636.svg)
 ![LayerZero](https://img.shields.io/badge/LayerZero-V2-orange.svg)
 
 Implementation of the ITX token bridge from Ethereum/Scroll to Base using LayerZero v2.
@@ -109,5 +109,5 @@ forge lint src
 forge lint test
 forge lint script
 npm run lint:fix
-slither . --filter-paths "lib"
+slither . --filter-paths "lib|node_modules"
 ```
