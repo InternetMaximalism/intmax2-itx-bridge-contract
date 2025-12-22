@@ -16,9 +16,13 @@ remappings = [
     "forge-std/=lib/forge-std/src/"
 ]
 solc = "0.8.33"
-ignored_error_codes = [2424]
+ignored_error_codes = [2424, 4591]
 
 [rpc_endpoints]
 ethereum = "https://eth.llamarpc.com"
 base = "https://mainnet.base.org"
 scroll = "https://rpc.scroll.io"
+
+[lint]
+lint_on_build = false
+mixed_case_exceptions = ["ERC", "URI", "DVN"]

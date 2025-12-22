@@ -29,16 +29,16 @@ contract ConfigureSenderOApp is Script {
         address sendLib = ILayerZeroEndpointV2(_endpoint).getSendLibrary(_oapp, _dstEid);
         console.log("Send Library:", sendLib);
 
-        address[] memory requiredDVNs = new address[](1);
-        requiredDVNs[0] = _dvn;
-        address[] memory optionalDVNs = new address[](0);
+        address[] memory requiredDVNAddresses = new address[](1);
+        requiredDVNAddresses[0] = _dvn;
+        address[] memory optionalDVNAddresses = new address[](0);
         UlnConfig memory ulnConfig = UlnConfig({
             confirmations: 15,
             requiredDVNCount: 1,
             optionalDVNCount: 0,
             optionalDVNThreshold: 0,
-            requiredDVNs: requiredDVNs,
-            optionalDVNs: optionalDVNs
+            requiredDVNs: requiredDVNAddresses,
+            optionalDVNs: optionalDVNAddresses
         });
         bytes memory configData = abi.encode(ulnConfig);
         SetConfigParam[] memory params = new SetConfigParam[](1);

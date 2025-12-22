@@ -32,18 +32,18 @@ contract ConfigureReceiverOApp is Script {
         (address receiveLib,) = ILayerZeroEndpointV2(_endpoint).getReceiveLibrary(_oapp, _srcEid);
         console.log("Configuring Receive Lib:", receiveLib, "for Source EID:", _srcEid);
 
-        address[] memory requiredDVNs = new address[](1);
-        requiredDVNs[0] = _dvn; // Use provided DVN to verify messages on Base
+        address[] memory requiredDVNAddresses = new address[](1);
+        requiredDVNAddresses[0] = _dvn; // Use provided DVN to verify messages on Base
 
-        address[] memory optionalDVNs = new address[](0);
+        address[] memory optionalDVNAddresses = new address[](0);
 
         UlnConfig memory ulnConfig = UlnConfig({
             confirmations: 15,
             requiredDVNCount: 1,
             optionalDVNCount: 0,
             optionalDVNThreshold: 0,
-            requiredDVNs: requiredDVNs,
-            optionalDVNs: optionalDVNs
+            requiredDVNs: requiredDVNAddresses,
+            optionalDVNs: optionalDVNAddresses
         });
 
         bytes memory configData = abi.encode(ulnConfig);

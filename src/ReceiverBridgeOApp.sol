@@ -67,6 +67,7 @@ contract ReceiverBridgeOApp is OAppReceiver, IReceiverBridgeOApp {
     {
         bytes memory payload = abi.encodePacked(guid, message);
         bytes32 payloadHash;
+        // solhint-disable-next-line no-inline-assembly
         assembly ("memory-safe") {
             payloadHash := keccak256(add(payload, 0x20), mload(payload))
         }
