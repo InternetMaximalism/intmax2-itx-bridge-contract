@@ -105,5 +105,9 @@ forge test
 
 # Format & Lint
 forge fmt
+forge lint src
+forge lint test
+forge lint script
 npm run lint:fix
+slither . --filter-paths "lib"
 ```

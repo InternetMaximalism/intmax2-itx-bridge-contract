@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.31;
+pragma solidity 0.8.33;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -66,7 +66,10 @@ contract ReceiverBridgeOApp is OAppReceiver, IReceiverBridgeOApp {
         returns (bool)
     {
         bytes memory payload = abi.encodePacked(guid, message);
-        bytes32 payloadHash = keccak256(payload);
+        bytes32 payloadHash;
+        assembly ("memory-safe") {
+            payloadHash := keccak256(add(payload, 0x20), mload(payload))
+        }
         return endpoint.inboundPayloadHash(address(this), srcEid, sender, nonce) == payloadHash;
     }
 }
