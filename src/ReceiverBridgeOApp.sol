@@ -6,20 +6,21 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {OAppReceiver, OAppCore, Origin} from "@layerzerolabs/oapp/contracts/oapp/OAppReceiver.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IReceiverBridgeOApp} from "./interfaces/IReceiverBridgeOApp.sol";
+import {IVesting} from "./interfaces/IVesting.sol";
 
 // Not to be UPGRADABLE because there are no internal variables
-// and there is a token rescue function in case something goes wrong.
+// and there is a vesting allowance system instead of holding tokens.
 contract ReceiverBridgeOApp is OAppReceiver, IReceiverBridgeOApp {
     using SafeERC20 for IERC20;
 
     // slither-disable-next-line naming-convention
-    IERC20 private immutable TOKEN;
+    IVesting public immutable VESTING_CONTRACT;
 
-    constructor(address endpoint, address delegate, address owner, address token)
+    constructor(address endpoint, address delegate, address owner, address vestingContract)
         OAppCore(endpoint, delegate)
         Ownable(owner)
     {
-        TOKEN = IERC20(token);
+        VESTING_CONTRACT = IVesting(vestingContract);
     }
 
     // Implement OAppReceiver internal hook and forward to mockLzReceive for testing.
@@ -39,8 +40,9 @@ contract ReceiverBridgeOApp is OAppReceiver, IReceiverBridgeOApp {
 
         require(recipient != address(0), RecipientZero());
 
-        TOKEN.safeTransfer(recipient, amount);
         emit BridgeFulfilled(srcUser, recipient, amount);
+        // Add vesting allowance instead of transferring tokens
+        VESTING_CONTRACT.addBridgeAllowance(recipient, amount);
     }
 
     // Not payable because the _lzReceive function does not handle eth
@@ -54,12 +56,8 @@ contract ReceiverBridgeOApp is OAppReceiver, IReceiverBridgeOApp {
         endpoint.clear(address(this), origin, guid, message);
     }
 
-    function withdrawTokens(address to, uint256 amount) external onlyOwner {
-        require(to != address(0), InvalidAddress());
-        require(amount > 0, InvalidAmount());
-        TOKEN.safeTransfer(to, amount);
-        emit TokensWithdrawn(to, amount);
-    }
+    // withdrawTokens function removed as ReceiverBridgeOApp no longer holds tokens.
+    // The vesting contract manages all token operations.
 
     function hasStoredPayload(uint32 srcEid, bytes32 sender, uint64 nonce, bytes32 guid, bytes calldata message)
         external

@@ -9,24 +9,27 @@ contract DeployReceiverBridge is Script {
     function run() external {
         // Load configuration from environment variables
         address endpoint = vm.envAddress("ENDPOINT");
-        address token = vm.envAddress("TOKEN");
+        address vestingContract = vm.envAddress("VESTING_CONTRACT");
 
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(deployerPrivateKey);
-        deploy(endpoint, token, deployer, deployer);
+        deploy(endpoint, vestingContract, deployer, deployer);
 
         vm.stopBroadcast();
     }
 
-    function deploy(address endpoint, address delegate, address owner, address token) public returns (address) {
+    function deploy(address endpoint, address delegate, address owner, address vestingContract)
+        public
+        returns (address)
+    {
         // Display configuration
         console.log("=== Receiver Bridge Deployment Configuration ===");
         console.log("Endpoint:", endpoint);
         console.log("Delegate:", delegate);
         console.log("Owner:", owner);
-        console.log("Token:", token);
+        console.log("Vesting Contract:", vestingContract);
         console.log("==============================================");
-        ReceiverBridgeOApp receiverBridge = new ReceiverBridgeOApp(endpoint, delegate, owner, token);
+        ReceiverBridgeOApp receiverBridge = new ReceiverBridgeOApp(endpoint, delegate, owner, vestingContract);
         console.log("=== Deployment Summary ===");
         console.log("ReceiverBridgeOApp:", address(receiverBridge));
         console.log("=========================");

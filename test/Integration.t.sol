@@ -10,6 +10,7 @@ import {MessagingFee} from "@layerzerolabs/oapp/contracts/oapp/OApp.sol";
 import {Origin} from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
 import {MockEndpointV2} from "./utils/MockEndpoint.t.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {MockVesting} from "./mocks/MockVesting.sol";
 
 contract MockINTMAXToken is IERC20 {
     mapping(address => uint256) private _balances;
@@ -56,7 +57,7 @@ contract IntegrationTest is Test {
     SenderBridgeOApp public senderBridge;
     ReceiverBridgeOApp public receiverBridge;
     MockINTMAXToken public sourceToken; // e.g., Ethereum
-    MockINTMAXToken public destToken; // e.g., Base
+    MockVesting public vesting; // Vesting contract on Base
     MockEndpointV2 public sourceEndpoint;
     MockEndpointV2 public destEndpoint;
 
@@ -69,7 +70,7 @@ contract IntegrationTest is Test {
 
     function setUp() public {
         sourceToken = new MockINTMAXToken();
-        destToken = new MockINTMAXToken();
+        vesting = new MockVesting();
         sourceEndpoint = new MockEndpointV2(SOURCE_EID);
         destEndpoint = new MockEndpointV2(DEST_EID);
 
@@ -80,8 +81,7 @@ contract IntegrationTest is Test {
         // User starts with tokens on Source chain
         sourceToken.setBalance(user, 1000 * 1e18);
 
-        // Receiver bridge holds tokens on Dest chain
-        destToken.setBalance(address(receiverBridge), 10000 * 1e18);
+        // No need to set balance for receiverBridge as it now uses vesting allowance
 
         vm.deal(user, 10 ether);
     }
@@ -98,7 +98,7 @@ contract IntegrationTest is Test {
 
     function _deployReceiverBridge() internal {
         // Deploy Receiver on Dest Chain
-        receiverBridge = new ReceiverBridgeOApp(address(destEndpoint), owner, owner, address(destToken));
+        receiverBridge = new ReceiverBridgeOApp(address(destEndpoint), owner, owner, address(vesting));
     }
 
     function _setupPeers() internal {
@@ -130,12 +130,12 @@ contract IntegrationTest is Test {
             Origin({srcEid: SOURCE_EID, sender: bytes32(uint256(uint160(address(senderBridge)))), nonce: 1});
 
         // 3. Verify Dest side receives and processes message
-        uint256 recipientBalanceBefore = destToken.balanceOf(recipient);
+        uint256 recipientAllowanceBefore = vesting.getAllowance(recipient);
 
         vm.prank(address(destEndpoint));
         receiverBridge.lzReceive(origin, bytes32(0), payload, address(0), "");
 
-        assertEq(destToken.balanceOf(recipient), recipientBalanceBefore + 1000 * 1e18);
+        assertEq(vesting.getAllowance(recipient), recipientAllowanceBefore + 1000 * 1e18);
     }
 
     function test_MultipleBridgeOperations() public {
@@ -167,7 +167,7 @@ contract IntegrationTest is Test {
         bytes memory correctedPayload = abi.encode(recipient, 1000 * 1e18, user);
         receiverBridge.manualRetry(origin, bytes32(0), correctedPayload, "");
 
-        assertEq(destToken.balanceOf(recipient), 1000 * 1e18);
+        assertEq(vesting.getAllowance(recipient), 1000 * 1e18);
     }
 
     function test_OwnershipTransferFlow() public {

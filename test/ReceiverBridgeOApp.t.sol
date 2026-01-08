@@ -11,6 +11,7 @@ import {
     MessagingFee,
     MessagingReceipt
 } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
+import {MockVesting} from "./mocks/MockVesting.sol";
 
 // Enhanced MockEndpoint with more realistic LayerZero functionality
 contract MockEndpointV2 {
@@ -137,7 +138,7 @@ contract MockINTMAXToken is IERC20 {
 
 contract ReceiverBridgeOAppTest is Test {
     ReceiverBridgeOApp public receiverBridge;
-    MockINTMAXToken public intmax;
+    MockVesting public vesting;
     MockEndpointV2 public mockEndpoint;
     address public owner = address(0x1);
     address public srcUser = address(0x2);
@@ -146,7 +147,7 @@ contract ReceiverBridgeOAppTest is Test {
     bytes32 public srcSender;
 
     function setUp() public {
-        intmax = new MockINTMAXToken();
+        vesting = new MockVesting();
         srcSender = bytes32(uint256(uint160(address(0x4)))); // Mock Base OApp address
         mockEndpoint = new MockEndpointV2(2); // Mainnet EID
 
@@ -154,7 +155,7 @@ contract ReceiverBridgeOAppTest is Test {
             address(mockEndpoint), // endpoint
             owner, // delegate
             owner, // owner
-            address(intmax) // token
+            address(vesting) // vesting contract
         );
 
         // Set peer so OAppCore._getPeerOrRevert won't revert during tests
@@ -165,20 +166,19 @@ contract ReceiverBridgeOAppTest is Test {
         vm.prank(owner);
         receiverBridge.setPeer(999, srcSender);
 
-        // Set balance for mainnet bridge for distribution
-        intmax.setBalance(address(receiverBridge), 10000 * 1e18);
+        // No need to set balance for receiverBridge as it now uses vesting allowance
     }
 
     function test_LzReceiveSuccess() public {
         uint256 amount = 100 * 1e18;
         bytes memory payload = abi.encode(recipient, amount, srcUser);
 
-        uint256 recipientBalanceBefore = intmax.balanceOf(recipient);
+        uint256 recipientAllowanceBefore = vesting.getAllowance(recipient);
 
         mockEndpoint.lzReceive(payable(address(receiverBridge)), SRC_EID, srcSender, 1, bytes32(0), payload, bytes(""));
 
-        uint256 recipientBalanceAfter = intmax.balanceOf(recipient);
-        assertEq(recipientBalanceAfter - recipientBalanceBefore, amount);
+        uint256 recipientAllowanceAfter = vesting.getAllowance(recipient);
+        assertEq(recipientAllowanceAfter - recipientAllowanceBefore, amount);
     }
 
     function test_LzReceiveRevertRecipientZero() public {
@@ -196,12 +196,12 @@ contract ReceiverBridgeOAppTest is Test {
         bytes32 guid = bytes32(uint256(1));
         bytes memory extraData = bytes("");
 
-        uint256 recipientBalanceBefore = intmax.balanceOf(recipient);
+        uint256 recipientAllowanceBefore = vesting.getAllowance(recipient);
 
         receiverBridge.manualRetry(origin, guid, message, extraData);
 
-        uint256 recipientBalanceAfter = intmax.balanceOf(recipient);
-        assertEq(recipientBalanceAfter - recipientBalanceBefore, amount);
+        uint256 recipientAllowanceAfter = vesting.getAllowance(recipient);
+        assertEq(recipientAllowanceAfter - recipientAllowanceBefore, amount);
     }
 
     function test_ClearMessage() public {
@@ -239,38 +239,6 @@ contract ReceiverBridgeOAppTest is Test {
         assertFalse(hasPayload);
     }
 
-    function test_WithdrawTokensSuccess() public {
-        uint256 amount = 1000 * 1e18;
-        address to = address(0x5);
-
-        uint256 toBalanceBefore = intmax.balanceOf(to);
-        uint256 contractBalanceBefore = intmax.balanceOf(address(receiverBridge));
-
-        vm.prank(owner);
-        vm.expectEmit(true, false, false, true);
-        emit IReceiverBridgeOApp.TokensWithdrawn(to, amount);
-        receiverBridge.withdrawTokens(to, amount);
-
-        uint256 toBalanceAfter = intmax.balanceOf(to);
-        uint256 contractBalanceAfter = intmax.balanceOf(address(receiverBridge));
-
-        assertEq(toBalanceAfter - toBalanceBefore, amount);
-        assertEq(contractBalanceBefore - contractBalanceAfter, amount);
-    }
-
-    function test_WithdrawTokensRevertInvalidAddress() public {
-        uint256 amount = 1000 * 1e18;
-
-        vm.prank(owner);
-        vm.expectRevert(IReceiverBridgeOApp.InvalidAddress.selector);
-        receiverBridge.withdrawTokens(address(0), amount);
-    }
-
-    function test_WithdrawTokensRevertInvalidAmount() public {
-        address to = address(0x5);
-
-        vm.prank(owner);
-        vm.expectRevert(IReceiverBridgeOApp.InvalidAmount.selector);
-        receiverBridge.withdrawTokens(to, 0);
-    }
+    // withdrawTokens tests removed as ReceiverBridgeOApp no longer holds tokens.
+    // The vesting contract manages all token operations.
 }

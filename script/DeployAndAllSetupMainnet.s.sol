@@ -6,14 +6,9 @@ import {DeployReceiverBridge, ReceiverBridgeOApp} from "./DeployReceiverBridge.s
 import {DeploySenderBridge, SenderBridgeOApp} from "./DeploySenderBridge.s.sol";
 import {ConfigureSenderOApp} from "./ConfigureSenderOApp.s.sol";
 import {ConfigureReceiverOApp} from "./ConfigureReceiverOApp.s.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
 // forge script script/DeployAllMainnet.s.sol:DeployAllMainnet --broadcast --verify
 contract DeployAndAllSetupMainnet is Script {
-    using SafeERC20 for IERC20;
-
     // solhint-disable-next-line state-visibility
     uint32 constant BASE_EID = 30184;
     // solhint-disable-next-line state-visibility
@@ -65,8 +60,6 @@ contract DeployAndAllSetupMainnet is Script {
 
         setupReceiverConfig(BASE_ENDPOINT, baseReceiver, SCROLL_EID, BASE_LAYER_ZERO_DVN);
         setupReceiverConfig(BASE_ENDPOINT, baseReceiver, ETHEREUM_EID, BASE_LAYER_ZERO_DVN);
-
-        prepareBaseToken(baseReceiver);
     }
 
     function setupReceiverConfig(address endpoint, address receiverAddress, uint32 srcEid, address dvn) private {
@@ -81,21 +74,6 @@ contract DeployAndAllSetupMainnet is Script {
         vm.selectFork(forkId);
         ConfigureSenderOApp configureSender = new ConfigureSenderOApp();
         configureSender.setupConfig(endpoint, senderAddress, dstEid, dvn);
-    }
-
-    function prepareBaseToken(address receiverAddress) private {
-        vm.selectFork(baseFork);
-        uint256 adminPrivateKey = vm.envUint("BASE_OLD_TOKEN_ADMIN_PRIVATE_KEY");
-        vm.startBroadcast(adminPrivateKey);
-        IAccessControl accessControl = IAccessControl(vm.envAddress("BASE_OLD_TOKEN"));
-        accessControl.grantRole(keccak256("MINTER_ROLE"), receiverAddress);
-        vm.stopBroadcast();
-
-        uint256 treasuryPrivateKey = vm.envUint("BASE_OLD_TOKEN_TREASURY_PRIVATE_KEY");
-        vm.startBroadcast(treasuryPrivateKey);
-        IERC20 token = IERC20(vm.envAddress("BASE_OLD_TOKEN"));
-        token.safeTransfer(receiverAddress, vm.envUint("BASE_OLD_TOKEN_TRANSFER_AMOUNT_FROM_TREASURY"));
-        vm.stopBroadcast();
     }
 
     function setReceiverPeer(uint32 senderEid, address receiverAddress, address senderAddress) private {
@@ -156,7 +134,10 @@ contract DeployAndAllSetupMainnet is Script {
         vm.startBroadcast(deployerPrivateKey);
         DeployReceiverBridge deployReceiver = new DeployReceiverBridge();
         address receiver = deployReceiver.deploy(
-            BASE_ENDPOINT, vm.envAddress("BASE_DELEGATE"), vm.envAddress("BASE_OWNER"), vm.envAddress("BASE_OLD_TOKEN")
+            BASE_ENDPOINT,
+            vm.envAddress("BASE_DELEGATE"),
+            vm.envAddress("BASE_OWNER"),
+            vm.envAddress("BASE_VESTING_CONTRACT")
         );
         vm.stopBroadcast();
         return receiver;
