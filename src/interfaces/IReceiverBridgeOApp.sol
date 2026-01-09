@@ -13,35 +13,13 @@ interface IReceiverBridgeOApp {
     /// @dev Thrown when recipient address is zero
     error RecipientZero();
 
-    /// @dev Thrown when an invalid address is provided
-    error InvalidAddress();
-
-    /// @dev Thrown when an invalid amount is provided
-    error InvalidAmount();
-
     /**
      * @dev Emitted when a bridge request is fulfilled on the destination chain
      * @param srcUser The original user who initiated the bridge on source chain
-     * @param recipient The recipient who received the tokens
-     * @param amount The amount of tokens transferred
+     * @param recipient The recipient who received the vesting allowance
+     * @param amount The amount of vesting allowance granted
      */
     event BridgeFulfilled(address indexed srcUser, address indexed recipient, uint256 amount);
-
-    /**
-     * @dev Emitted when tokens are withdrawn by owner
-     * @param to The address that received the withdrawn tokens
-     * @param amount The amount of tokens withdrawn
-     */
-    event TokensWithdrawn(address indexed to, uint256 amount);
-
-    /**
-     * @notice Withdraw tokens from the contract (owner only)
-     * @param to The address to send tokens to
-     * @param amount The amount of tokens to withdraw
-     * @dev Only callable by contract owner
-     * @dev Validates that 'to' is not zero address and amount is greater than 0
-     */
-    function withdrawTokens(address to, uint256 amount) external;
 
     /**
      * @notice Manually retry a failed LayerZero message

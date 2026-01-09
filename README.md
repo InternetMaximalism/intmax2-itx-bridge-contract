@@ -13,11 +13,13 @@ graph LR
     User((User)) --> |1. bridgeTo| Sender["SenderBridgeOApp<br>(Source: Ethereum/Scroll)"]
     Sender --> |2. Verify & Send| LZ[LayerZero Endpoint]
     LZ --> |3. Receive| Receiver["ReceiverBridgeOApp<br>(Dest: Base)"]
-    Receiver --> |4. Transfer ITX| Recipient((Recipient))
+    Receiver --> |4. Add Vesting Allowance| Vesting["Vesting Contract<br>(Base)"]
+    Vesting --> |5. Create Vesting| Recipient((Recipient))
 ```
 
 - **Sender OApp**: Calculates `delta` (Current Balance - Bridged Amount) and sends the message.
-- **Receiver OApp**: Receives the message and transfers the specified amount of ITX tokens from its own balance on Base.
+- **Receiver OApp**: Receives the message and adds vesting allowance to the recipient via the Vesting contract on Base.
+- **Vesting Contract**: Manages token distribution through vesting schedules. Recipients can create vesting plans using their bridge-granted allowance.
 
 ## 🚀 Deployment Guide (Mainnet)
 
@@ -51,13 +53,7 @@ SCROLL_OLD_TOKEN=0x... # Old ITX on Scroll
 # --- Receiver Configuration (Base) ---
 BASE_DELEGATE=0x...
 BASE_OWNER=0x...
-BASE_OLD_TOKEN=0x... # ITX on Base
-
-# --- Token Setup (Base) ---
-# To automatically fund the receiver and grant roles:
-BASE_OLD_TOKEN_ADMIN_PRIVATE_KEY=0x... # Key with admin role on Base Token
-BASE_OLD_TOKEN_TREASURY_PRIVATE_KEY=0x... # Key with funds to transfer to Receiver
-BASE_OLD_TOKEN_TRANSFER_AMOUNT_FROM_TREASURY=500000000000000000000000 # e.g. 500,000 ITX
+BASE_VESTING_CONTRACT=0x... # Vesting contract address on Base
 ```
 
 ### 3. Run the Automated Script
@@ -67,8 +63,6 @@ This command will:
 2.  Deploy `ReceiverBridgeOApp` on Base.
 3.  Configure Peers (bidirectional trust).
 4.  Configure DVNs (LayerZero verification).
-5.  Grant `MINTER_ROLE` to the Receiver on Base.
-6.  Fund the Receiver with ITX tokens on Base.
 
 ```bash
 forge script script/DeployAndAllSetupMainnet.s.sol:DeployAndAllSetupMainnet --broadcast --verify --etherscan-api-key $ETHERSCAN_API_KEY
@@ -77,6 +71,8 @@ forge script script/DeployAndAllSetupMainnet.s.sol:DeployAndAllSetupMainnet --br
 > **Note:** The script switches chains automatically. Ensure your `PRIVATE_KEY` has ETH for gas on all three chains.
 >
 > **Configuration Note:** The script configures the OApps to use the **LayerZero Labs DVN** with **15 block confirmations** by default. To change these settings, please modify `script/DeployAndAllSetupMainnet.s.sol`, `script/ConfigureSenderOApp.s.sol`, and `script/ConfigureReceiverOApp.s.sol`.
+>
+> **Important:** After deployment, the Vesting contract owner must register the ReceiverBridgeOApp as an authorized bridge by calling `IVesting.setBridge(receiverBridgeAddress, true)`. This allows the ReceiverBridgeOApp to add vesting allowances for bridged users.
 
 ## 💻 Usage (Bridging)
 
@@ -105,9 +101,7 @@ forge test
 
 # Format & Lint
 forge fmt
-forge lint src
-forge lint test
-forge lint script
+forge lint src test script
 npm run lint:fix
 slither . --filter-paths "lib|node_modules"
 ```

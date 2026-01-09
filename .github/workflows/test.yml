@@ -17,6 +17,14 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install npm dependencies
+        run: npm ci
+
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
 
@@ -33,6 +41,30 @@ jobs:
         run: |
           forge build --sizes
         id: build
+
+      - name: Run Forge lint
+        run: |
+          forge lint src test script
+        id: lint
+
+      - name: Run solhint
+        run: |
+          yes | npm run lint:fix
+        id: solhint
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install Slither
+        run: |
+          pip install slither-analyzer
+
+      - name: Run Slither
+        run: |
+          slither . --filter-paths "lib|node_modules"
+        id: slither
 
       - name: Run Forge tests
         run: |
