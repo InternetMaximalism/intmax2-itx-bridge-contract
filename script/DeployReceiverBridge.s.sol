@@ -13,7 +13,7 @@ contract DeployReceiverBridge is Script {
 
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(deployerPrivateKey);
-        deploy(endpoint, vestingContract, deployer, deployer);
+        deploy(endpoint, deployer, deployer, vestingContract);
 
         vm.stopBroadcast();
     }
