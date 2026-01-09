@@ -56,9 +56,6 @@ contract ReceiverBridgeOApp is OAppReceiver, IReceiverBridgeOApp {
         endpoint.clear(address(this), origin, guid, message);
     }
 
-    // withdrawTokens function removed as ReceiverBridgeOApp no longer holds tokens.
-    // The vesting contract manages all token operations.
-
     function hasStoredPayload(uint32 srcEid, bytes32 sender, uint64 nonce, bytes32 guid, bytes calldata message)
         external
         view
