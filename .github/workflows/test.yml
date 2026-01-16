@@ -49,7 +49,7 @@ jobs:
 
       - name: Run solhint
         run: |
-          yes | npm run lint:fix
+          yes | npm run lint
         id: solhint
 
       - name: Setup Python
