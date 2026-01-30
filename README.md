@@ -90,6 +90,8 @@ Once deployed, users can bridge tokens from Ethereum or Scroll to Base.
     cast send <SENDER_OAPP> "bridgeTo(address)" <RECIPIENT> --value <NATIVE_FEE> --rpc-url <SOURCE_RPC> --private-key <USER_KEY>
     ```
 
+> ⚠️ **Important**: The `--value` must be the **exact** amount returned by `quoteBridge()`. The underlying `OAppSenderUpgradeable._payNative()` function requires `msg.value == fee.nativeFee` (not `>=`). Sending more ETH than the quoted fee will cause a `NotEnoughNative` revert.
+
 ## 🛠 Development Commands
 
 ```bash

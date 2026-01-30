@@ -59,6 +59,17 @@ When asked to modify code, follow this strict cycle:
   - `ReceiverBridgeOApp` depends on the Vesting contract being deployed first.
   - After deploying `ReceiverBridgeOApp`, the Vesting contract owner must call `IVesting.setBridge(receiverBridgeAddress, true)` to authorize it.
   - The temporary `IVesting.sol` interface will be replaced once the official vesting contract package is published.
+- **Bridge Fee Precision (Critical):**
+  - When calling `bridgeTo()`, the `msg.value` must be the **exact** amount returned by `quoteBridge()`.
+  - The `OAppSenderUpgradeable._payNative()` function checks `msg.value == fee.nativeFee`, NOT `msg.value >= fee.nativeFee`.
+  - Sending more ETH than the quoted fee will cause a `NotEnoughNative(uint256)` revert.
+  - Example workflow:
+    ```bash
+    # 1. Get exact fee
+    FEE=$(cast call <SENDER_OAPP> "quoteBridge()(uint256,uint256)" --from <USER> --rpc-url <RPC> | head -1)
+    # 2. Use exact fee in bridgeTo
+    cast send <SENDER_OAPP> "bridgeTo(address)" <RECIPIENT> --value $FEE --private-key <KEY> --rpc-url <RPC>
+    ```
 
 ---
 **Language:** While this file is in English, please interact with the user in **Japanese** unless requested otherwise.
