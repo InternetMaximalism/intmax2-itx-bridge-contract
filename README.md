@@ -4,21 +4,21 @@
 ![Solidity](https://img.shields.io/badge/Solidity-0.8.33-363636.svg)
 ![LayerZero](https://img.shields.io/badge/LayerZero-V2-orange.svg)
 
-Implementation of the ITX token bridge from Ethereum/Scroll to Base using LayerZero v2.
+Implementation of the ITX token bridge from Scroll/Base to Ethereum using LayerZero v2.
 
 ## 🌉 Architecture
 
 ```mermaid
 graph LR
-    User((User)) --> |1. bridgeTo| Sender["SenderBridgeOApp<br>(Source: Ethereum/Scroll)"]
+    User((User)) --> |1. bridgeTo| Sender["SenderBridgeOApp<br>(Source: Scroll/Base)"]
     Sender --> |2. Verify & Send| LZ[LayerZero Endpoint]
-    LZ --> |3. Receive| Receiver["ReceiverBridgeOApp<br>(Dest: Base)"]
-    Receiver --> |4. Add Vesting Allowance| Vesting["Vesting Contract<br>(Base)"]
+    LZ --> |3. Receive| Receiver["ReceiverBridgeOApp<br>(Dest: Ethereum)"]
+    Receiver --> |4. Add Vesting Allowance| Vesting["Vesting Contract<br>(Ethereum)"]
     Vesting --> |5. Create Vesting| Recipient((Recipient))
 ```
 
 - **Sender OApp**: Calculates `delta` (Current Balance - Bridged Amount) and sends the message.
-- **Receiver OApp**: Receives the message and adds vesting allowance to the recipient via the Vesting contract on Base.
+- **Receiver OApp**: Receives the message and adds vesting allowance to the recipient via the Vesting contract on Ethereum.
 - **Vesting Contract**: Manages token distribution through vesting schedules. Recipients can create vesting plans using their bridge-granted allowance.
 
 ## 🚀 Deployment Guide (Mainnet)
@@ -40,27 +40,27 @@ PRIVATE_KEY=0x... # Must have funds on Ethereum, Scroll, and Base
 # --- Endpoints & EIDs (LayerZero V2) ---
 # These constants are defined in the script, but ensure your foundry.toml has rpc_endpoints.
 
-# --- Sender Configuration (Ethereum) ---
+# --- Receiver Configuration (Ethereum) ---
 ETHEREUM_DELEGATE=0x...
 ETHEREUM_OWNER=0x...
-ETHEREUM_OLD_TOKEN=0x... # Old ITX on Ethereum
+ETHEREUM_VESTING_CONTRACT=0x... # Vesting contract address on Ethereum
 
 # --- Sender Configuration (Scroll) ---
 SCROLL_DELEGATE=0x...
 SCROLL_OWNER=0x...
 SCROLL_OLD_TOKEN=0x... # Old ITX on Scroll
 
-# --- Receiver Configuration (Base) ---
+# --- Sender Configuration (Base) ---
 BASE_DELEGATE=0x...
 BASE_OWNER=0x...
-BASE_VESTING_CONTRACT=0x... # Vesting contract address on Base
+BASE_OLD_TOKEN=0x... # Old ITX on Base
 ```
 
 ### 3. Run the Automated Script
 
 This command will:
-1.  Deploy `SenderBridgeOApp` on Ethereum and Scroll.
-2.  Deploy `ReceiverBridgeOApp` on Base.
+1.  Deploy `ReceiverBridgeOApp` on Ethereum.
+2.  Deploy `SenderBridgeOApp` on Scroll and Base.
 3.  Configure Peers (bidirectional trust).
 4.  Configure DVNs (LayerZero verification).
 
@@ -76,17 +76,17 @@ forge script script/DeployAndAllSetupMainnet.s.sol:DeployAndAllSetupMainnet --br
 
 ## 💻 Usage (Bridging)
 
-Once deployed, users can bridge tokens from Ethereum or Scroll to Base.
+Once deployed, users can bridge tokens from Scroll or Base to Ethereum.
 
 1.  **Quote Fee**: Check the Native fee required.
     ```bash
-    # Run on Source Chain (Ethereum or Scroll)
+    # Run on Source Chain (Scroll or Base)
     cast call <SENDER_OAPP> "quoteBridge()(uint256 nativeFee, uint256 zroFee)" --from <USER> --rpc-url <SOURCE_RPC>
     ```
 
 2.  **Execute Bridge**: Send tokens.
     ```bash
-    # Run on Source Chain (Ethereum or Scroll)
+    # Run on Source Chain (Scroll or Base)
     cast send <SENDER_OAPP> "bridgeTo(address)" <RECIPIENT> --value <NATIVE_FEE> --rpc-url <SOURCE_RPC> --private-key <USER_KEY>
     ```
 

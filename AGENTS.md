@@ -5,20 +5,20 @@ At the start of a session, please read this file to understand the project scope
 
 ## 1. Project Overview
 - **Name:** Intmax2 ITX Bridge Contract
-- **Purpose:** A token bridge from Ethereum/Scroll (Source) to Base (Destination) using LayerZero v2.
-- **Core Mechanism:** **"Proof of Holding"**. Unlike traditional Lock & Mint or Burn & Mint bridges, the Sender contract on the source chain calculates the "Delta" (increase in user balance since last bridge) and sends a message to Base. No burning or locking occurs on the source chain. On Base, the Receiver contract adds vesting allowance to the recipient via the Vesting contract, allowing them to create vesting plans and claim tokens over time.
+- **Purpose:** A token bridge from Scroll/Base (Source) to Ethereum (Destination) using LayerZero v2.
+- **Core Mechanism:** **"Proof of Holding"**. Unlike traditional Lock & Mint or Burn & Mint bridges, the Sender contract on the source chain calculates the "Delta" (increase in user balance since last bridge) and sends a message to Ethereum. No burning or locking occurs on the source chain. On Ethereum, the Receiver contract adds vesting allowance to the recipient via the Vesting contract, allowing them to create vesting plans and claim tokens over time.
 - **Stack:** Solidity 0.8.33, Foundry, LayerZero v2 (OApp), OpenZeppelin Upgradeable.
 
 ## 2. Architecture & Key Files
-- **`src/SenderBridgeOApp.sol` (Source: Ethereum/Scroll):**
+- **`src/SenderBridgeOApp.sol` (Source: Scroll/Base):**
   - The core Sender contract.
   - **Upgradeable** (UUPS).
   - Uses **Unstructured Storage** pattern manually (via assembly slots) to manage state.
   - **Crucial:** Checks `TOKEN.balanceOf(user)` vs `bridgedAmount[user]` to determine the transferable amount.
-- **`src/ReceiverBridgeOApp.sol` (Dest: Base):**
+- **`src/ReceiverBridgeOApp.sol` (Dest: Ethereum):**
   - The Receiver contract.
   - **Non-Upgradeable** (Immutable logic).
-  - Integrates with the Vesting contract on Base and adds vesting allowance to recipients upon receiving a valid LayerZero message.
+  - Integrates with the Vesting contract on Ethereum and adds vesting allowance to recipients upon receiving a valid LayerZero message.
   - **Important:** Does not hold tokens directly. Token distribution is managed by the Vesting contract.
 - **`src/interfaces/IVesting.sol`:**
   - Temporary interface for the Vesting contract.

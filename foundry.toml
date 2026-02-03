@@ -13,7 +13,8 @@ remappings = [
     "@layerzerolabs/oapp-evm/=lib/devtools/packages/oapp-evm/",
     "@layerzerolabs/oapp-evm-upgradeable/=lib/devtools/packages/oapp-evm-upgradeable/",
     "solidity-bytes-utils/=lib/solidity-bytes-utils/",
-    "forge-std/=lib/forge-std/src/"
+    "forge-std/=lib/forge-std/src/",
+    "lz-address-book/=lib/lz-address-book/src/"
 ]
 solc = "0.8.33"
 ignored_error_codes = [2424, 4591]
