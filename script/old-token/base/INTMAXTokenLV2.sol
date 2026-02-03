@@ -9,7 +9,7 @@ import {IINTMAXToken} from "./IINTMAXToken.sol";
 /**
  * @title INTMAXToken
  */
-contract INTMAXToken is ERC20, AccessControl, IINTMAXToken {
+contract INTMAXTokenLV2 is ERC20, AccessControl, IINTMAXToken {
     /**
      * @notice The duration of phase 0 in days.
      */
@@ -30,6 +30,11 @@ contract INTMAXToken is ERC20, AccessControl, IINTMAXToken {
      * @notice The token genesis timestamp.
      */
     uint256 public constant GENESIS_TIMESTAMP = 1722999120;
+
+    /**
+     * @notice The timestamp when the base start mining.
+     */
+    uint256 public constant BASE_START_MINING_TIMESTAMP = 1729296029;
 
     /**
      * @notice The reward per day during phase 0, in tokens (with 18 decimals).
@@ -57,17 +62,39 @@ contract INTMAXToken is ERC20, AccessControl, IINTMAXToken {
     bool public transfersAllowed;
 
     /**
+     * @notice Whether mining has started.
+     */
+    bool public isStarted;
+
+    modifier onlyMiningStarted() {
+        if (!isStarted) {
+            revert MiningNotStarted();
+        }
+        _;
+    }
+
+    /**
      * @dev Sets the token name and symbol, and initializes the owner and minter.
      * @param admin_ The address of the initial admin.
-     * @param minter_ The address of the initial minter.
      */
-    constructor(address admin_, address minter_) ERC20("INTMAX", "ITX") {
+    constructor(address admin_) ERC20("INTMAX", "ITX") {
         // The reward per day is 8937500 tokens.
         PHASE0_REWARD_PER_DAY = 8937500 * (10 ** decimals());
         MAX_SUPPLY = PHASE0_REWARD_PER_DAY * PHASE0_PERIOD * NUM_PHASES;
         transfersAllowed = false;
         _grantRole(DEFAULT_ADMIN_ROLE, admin_);
-        _grantRole(MINTER_ROLE, minter_);
+        _startMining();
+    }
+
+    /**
+     * @dev Start mining.
+     */
+    function _startMining() internal {
+        if (isStarted) {
+            revert MiningAlreadyStarted();
+        }
+        totalClaimedAmount = _totalMintableAmount(BASE_START_MINING_TIMESTAMP);
+        isStarted = true;
     }
 
     function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
@@ -80,8 +107,8 @@ contract INTMAXToken is ERC20, AccessControl, IINTMAXToken {
      * @dev Only callable by the minter.
      * @param to The address to mint tokens to.
      */
-    function mint(address to) external onlyRole(MINTER_ROLE) {
-        uint256 mintable = totalMintableAmount();
+    function mint(address to) external onlyMiningStarted onlyRole(MINTER_ROLE) {
+        uint256 mintable = _totalMintableAmount(block.timestamp);
         _mint(to, mintable - totalClaimedAmount);
         totalClaimedAmount = mintable;
     }
@@ -96,6 +123,15 @@ contract INTMAXToken is ERC20, AccessControl, IINTMAXToken {
     }
 
     /**
+     * @notice Burns a specified amount of tokens from the caller's account, without increasing the total burned amount.
+     * @param amount The amount of tokens to burn.
+     * @dev This function is used for bridging tokens from other chains.
+     */
+    function vanish(uint256 amount) external {
+        _burn(msg.sender, amount);
+    }
+
+    /**
      * @notice Allows transfers.
      */
     function allowTransfers() external onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -103,7 +139,7 @@ contract INTMAXToken is ERC20, AccessControl, IINTMAXToken {
     }
 
     /**
-     * @notice Calculates the total mintable amount up to the current date.
+     * @notice Calculates the total mintable amount up to the specified timestamp.
      * @dev The total mintable amount follows a specific issuance curve:
      * - There are phases from phase0 to phase6.
      * - Phase0 starts at the moment the contract is deployed.
@@ -114,10 +150,11 @@ contract INTMAXToken is ERC20, AccessControl, IINTMAXToken {
      * - After phase6 ends, no more minting is allowed.
      * - The function iterates through each phase, doubling the duration and halving the daily reward,
      *   accumulating the total mintable amount until the current date.
+     * @param timestamp The timestamp to calculate the total mintable amount up to.
      * @return The total mintable amount up to the current date.
      */
-    function totalMintableAmount() public view returns (uint256) {
-        uint256 elapsedDays = (block.timestamp - GENESIS_TIMESTAMP) / 1 days;
+    function _totalMintableAmount(uint256 timestamp) internal view returns (uint256) {
+        uint256 elapsedDays = (timestamp - GENESIS_TIMESTAMP) / 1 days;
         uint256 totalReward = 0;
         uint256 rewardPerDay = PHASE0_REWARD_PER_DAY;
 
@@ -135,6 +172,10 @@ contract INTMAXToken is ERC20, AccessControl, IINTMAXToken {
 
         // Add half of the total burned amount to the total reward
         return totalReward + (totalBurnedAmount / 2);
+    }
+
+    function totalMintableAmount() external view returns (uint256) {
+        return _totalMintableAmount(block.timestamp);
     }
 
     /**
