@@ -14,46 +14,14 @@ interface IINTMAXToken is IERC20 {
     error TransferNotAllowed();
 
     /**
-     * @notice Returns the duration of phase 0 in days.
-     * @return The duration of phase 0 in days.
+     * @dev Emitted when tried to start mining while mining has already started.
      */
-    // solhint-disable-next-line func-name-mixedcase
-    function PHASE0_PERIOD() external view returns (uint256);
+    error MiningAlreadyStarted();
 
     /**
-     * @notice Returns the total number of phases.
-     * @return The total number of phases.
+     * @dev Emitted when tried to claim tokens while mining has not started.
      */
-    // solhint-disable-next-line func-name-mixedcase
-    function NUM_PHASES() external view returns (uint256);
-
-    /**
-     * @notice Returns the role identifier for the minter
-     * @return The role identifier for the minter
-     */
-    // solhint-disable-next-line func-name-mixedcase
-    function MINTER_ROLE() external view returns (bytes32);
-
-    /**
-     * @notice Returns the token genesis timestamp.
-     * @return The token genesis timestamp.
-     */
-    // solhint-disable-next-line func-name-mixedcase
-    function GENESIS_TIMESTAMP() external view returns (uint256);
-
-    /**
-     * @notice Returns the reward per day during phase 0, in tokens (with 18 decimals).
-     * @return The reward per day during phase 0, in tokens (with 18 decimals).
-     */
-    // solhint-disable-next-line func-name-mixedcase
-    function PHASE0_REWARD_PER_DAY() external view returns (uint256);
-
-    /**
-     * @notice Returns maximum supply.
-     * @return Maximum supply.
-     */
-    // solhint-disable-next-line func-name-mixedcase
-    function MAX_SUPPLY() external view returns (uint256);
+    error MiningNotStarted();
 
     /**
      * @notice Returns the total amount of tokens that have been burned.
@@ -85,6 +53,13 @@ interface IINTMAXToken is IERC20 {
      * @param amount The amount of tokens to burn.
      */
     function burn(uint256 amount) external;
+
+    /**
+     * @notice Burns a specified amount of tokens from the caller's account, without increasing the total burned amount.
+     * @param amount The amount of tokens to burn.
+     * @dev This function is used for bridging tokens from other chains.
+     */
+    function vanish(uint256 amount) external;
 
     /**
      * @notice Enables token transfers.
