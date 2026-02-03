@@ -6,30 +6,17 @@ import {DeployReceiverBridge, ReceiverBridgeOApp} from "./DeployReceiverBridge.s
 import {DeploySenderBridge, SenderBridgeOApp} from "./DeploySenderBridge.s.sol";
 import {ConfigureSenderOApp} from "./ConfigureSenderOApp.s.sol";
 import {ConfigureReceiverOApp} from "./ConfigureReceiverOApp.s.sol";
+import {
+    LayerZeroV2BaseMainnet,
+    LayerZeroV2DVNBaseMainnet,
+    LayerZeroV2EthereumMainnet,
+    LayerZeroV2DVNEthereumMainnet,
+    LayerZeroV2ScrollMainnet,
+    LayerZeroV2DVNScrollMainnet
+} from "lz-address-book/generated/LZAddresses.sol";
 
 // forge script script/DeployAllMainnet.s.sol:DeployAllMainnet --broadcast --verify
 contract DeployAndAllSetupMainnet is Script {
-    // solhint-disable-next-line state-visibility
-    uint32 constant BASE_EID = 30184;
-    // solhint-disable-next-line state-visibility
-    uint32 constant ETHEREUM_EID = 30101;
-    // solhint-disable-next-line state-visibility
-    uint32 constant SCROLL_EID = 30214;
-
-    // solhint-disable-next-line state-visibility
-    address constant ETHEREUM_ENDPOINT = 0x1a44076050125825900e736c501f859c50fE728c;
-    // solhint-disable-next-line state-visibility
-    address constant SCROLL_ENDPOINT = 0x1a44076050125825900e736c501f859c50fE728c;
-    // solhint-disable-next-line state-visibility
-    address constant BASE_ENDPOINT = 0x1a44076050125825900e736c501f859c50fE728c;
-
-    // solhint-disable-next-line state-visibility
-    address constant ETHEREUM_LAYER_ZERO_DVN = 0x589dEDbD617e0CBcB916A9223F4d1300c294236b;
-    // solhint-disable-next-line state-visibility
-    address constant SCROLL_LAYER_ZERO_DVN = 0xbe0d08a85EeBFCC6eDA0A843521f7CBB1180D2e2;
-    // solhint-disable-next-line state-visibility
-    address constant BASE_LAYER_ZERO_DVN = 0x9e059a54699a285714207b43B055483E78FAac25;
-
     // Fork IDs
     uint256 private scrollFork;
     uint256 private ethFork;
@@ -45,25 +32,47 @@ contract DeployAndAllSetupMainnet is Script {
         address deployer = vm.addr(deployerPrivateKey);
         console.log("Deployer Address:", deployer);
 
+        address ethReceiver = deployEthereumReceiver();
         address scrollSender = deployScrollSender();
-        address ethSender = deployEthereumSender();
-        address baseReceiver = deployBaseReceiver();
+        address baseSender = deployBaseSender();
 
-        setSenderPeer(scrollFork, scrollSender, baseReceiver);
-        setSenderPeer(ethFork, ethSender, baseReceiver);
+        setSenderPeer(scrollFork, scrollSender, ethReceiver);
+        setSenderPeer(baseFork, baseSender, ethReceiver);
 
-        setReceiverPeer(SCROLL_EID, baseReceiver, scrollSender);
-        setReceiverPeer(ETHEREUM_EID, baseReceiver, ethSender);
+        setReceiverPeer(LayerZeroV2ScrollMainnet.EID, ethReceiver, scrollSender);
+        setReceiverPeer(LayerZeroV2BaseMainnet.EID, ethReceiver, baseSender);
 
-        setupSenderConfig(scrollFork, SCROLL_ENDPOINT, scrollSender, BASE_EID, SCROLL_LAYER_ZERO_DVN);
-        setupSenderConfig(ethFork, ETHEREUM_ENDPOINT, ethSender, BASE_EID, ETHEREUM_LAYER_ZERO_DVN);
+        setupSenderConfig(
+            scrollFork,
+            address(LayerZeroV2ScrollMainnet.ENDPOINT_V2),
+            scrollSender,
+            LayerZeroV2EthereumMainnet.EID,
+            LayerZeroV2DVNScrollMainnet.DVN_LAYERZERO_LABS
+        );
+        setupSenderConfig(
+            baseFork,
+            address(LayerZeroV2BaseMainnet.ENDPOINT_V2),
+            baseSender,
+            LayerZeroV2EthereumMainnet.EID,
+            LayerZeroV2DVNBaseMainnet.DVN_LAYERZERO_LABS_2
+        );
 
-        setupReceiverConfig(BASE_ENDPOINT, baseReceiver, SCROLL_EID, BASE_LAYER_ZERO_DVN);
-        setupReceiverConfig(BASE_ENDPOINT, baseReceiver, ETHEREUM_EID, BASE_LAYER_ZERO_DVN);
+        setupReceiverConfig(
+            address(LayerZeroV2EthereumMainnet.ENDPOINT_V2),
+            ethReceiver,
+            LayerZeroV2ScrollMainnet.EID,
+            LayerZeroV2DVNEthereumMainnet.DVN_LAYERZERO_LABS
+        );
+        setupReceiverConfig(
+            address(LayerZeroV2EthereumMainnet.ENDPOINT_V2),
+            ethReceiver,
+            LayerZeroV2BaseMainnet.EID,
+            LayerZeroV2DVNEthereumMainnet.DVN_LAYERZERO_LABS
+        );
     }
 
     function setupReceiverConfig(address endpoint, address receiverAddress, uint32 srcEid, address dvn) private {
-        vm.selectFork(baseFork);
+        vm.selectFork(ethFork);
         ConfigureReceiverOApp configureReceiver = new ConfigureReceiverOApp();
         configureReceiver.setupConfig(endpoint, receiverAddress, srcEid, dvn);
     }
@@ -77,7 +86,7 @@ contract DeployAndAllSetupMainnet is Script {
     }
 
     function setReceiverPeer(uint32 senderEid, address receiverAddress, address senderAddress) private {
-        vm.selectFork(baseFork);
+        vm.selectFork(ethFork);
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
         ReceiverBridgeOApp receiver = ReceiverBridgeOApp(receiverAddress);
@@ -86,12 +95,12 @@ contract DeployAndAllSetupMainnet is Script {
         console.log("set receiver peer for eid:", senderEid);
     }
 
-    function setSenderPeer(uint256 forkId, address senderAddress, address baseReceiver) private {
+    function setSenderPeer(uint256 forkId, address senderAddress, address ethReceiver) private {
         vm.selectFork(forkId);
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
         SenderBridgeOApp sender = SenderBridgeOApp(senderAddress);
-        sender.setPeer(BASE_EID, bytes32(uint256(uint160(baseReceiver))));
+        sender.setPeer(LayerZeroV2EthereumMainnet.EID, bytes32(uint256(uint160(ethReceiver))));
         vm.stopBroadcast();
         console.log("set sender peer on fork:", forkId);
     }
@@ -102,42 +111,42 @@ contract DeployAndAllSetupMainnet is Script {
         vm.startBroadcast(deployerPrivateKey);
         DeploySenderBridge deploySender = new DeploySenderBridge();
         address sender = deploySender.deploy(
-            SCROLL_ENDPOINT,
+            address(LayerZeroV2ScrollMainnet.ENDPOINT_V2),
             vm.envAddress("SCROLL_DELEGATE"),
             vm.envAddress("SCROLL_OWNER"),
             vm.envAddress("SCROLL_OLD_TOKEN"),
-            BASE_EID
+            LayerZeroV2EthereumMainnet.EID
         );
         vm.stopBroadcast();
         return sender;
     }
 
-    function deployEthereumSender() private returns (address) {
-        vm.selectFork(ethFork);
+    function deployBaseSender() private returns (address) {
+        vm.selectFork(baseFork);
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
         DeploySenderBridge deploySender = new DeploySenderBridge();
         address sender = deploySender.deploy(
-            ETHEREUM_ENDPOINT,
-            vm.envAddress("ETHEREUM_DELEGATE"),
-            vm.envAddress("ETHEREUM_OWNER"),
-            vm.envAddress("ETHEREUM_OLD_TOKEN"),
-            BASE_EID
+            address(LayerZeroV2BaseMainnet.ENDPOINT_V2),
+            vm.envAddress("BASE_DELEGATE"),
+            vm.envAddress("BASE_OWNER"),
+            vm.envAddress("BASE_OLD_TOKEN"),
+            LayerZeroV2EthereumMainnet.EID
         );
         vm.stopBroadcast();
         return sender;
     }
 
-    function deployBaseReceiver() private returns (address) {
-        vm.selectFork(baseFork);
+    function deployEthereumReceiver() private returns (address) {
+        vm.selectFork(ethFork);
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
         DeployReceiverBridge deployReceiver = new DeployReceiverBridge();
         address receiver = deployReceiver.deploy(
-            BASE_ENDPOINT,
-            vm.envAddress("BASE_DELEGATE"),
-            vm.envAddress("BASE_OWNER"),
-            vm.envAddress("BASE_VESTING_CONTRACT")
+            address(LayerZeroV2EthereumMainnet.ENDPOINT_V2),
+            vm.envAddress("ETHEREUM_DELEGATE"),
+            vm.envAddress("ETHEREUM_OWNER"),
+            vm.envAddress("ETHEREUM_VESTING_CONTRACT")
         );
         vm.stopBroadcast();
         return receiver;
